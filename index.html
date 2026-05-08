@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hyrox Performance Tracker</title>
+<!-- Google Identity Services para OAuth -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@300;400;500&display=swap');
@@ -21,7 +23,11 @@
   .btn.primary:hover{background:#d4e800;}
   .btn.gs{border-color:rgba(52,168,83,0.5);color:var(--gs);background:rgba(52,168,83,0.07);}
   .btn.gs:hover{background:rgba(52,168,83,0.18);border-color:var(--gs);}
-  .btn.gs.pending{border-color:#ff9f43;color:#ff9f43;background:rgba(255,159,67,0.07);}
+  .btn.google{border-color:rgba(255,255,255,0.2);color:var(--text);background:var(--surface2);display:inline-flex;align-items:center;gap:6px;}
+  .btn.google:hover{border-color:rgba(255,255,255,0.4);background:var(--surface3);}
+  .btn.google.signed-in{border-color:rgba(52,168,83,0.5);color:var(--gs);background:rgba(52,168,83,0.07);}
+  .google-avatar{width:18px;height:18px;border-radius:50%;object-fit:cover;}
+  .google-icon{width:16px;height:16px;flex-shrink:0;}
 
   /* SYNC BAR */
   .sync-bar{margin:0.6rem 2rem 0.4rem;padding:9px 14px;background:var(--surface);border-radius:5px;border:1px solid rgba(52,168,83,0.2);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -314,6 +320,10 @@
     <div class="logo-sub">Performance Tracker</div>
   </div>
   <div class="header-actions">
+    <button class="btn google" id="google-btn" onclick="handleGoogleBtn()">
+      <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      <span id="google-btn-text">Conectar Google</span>
+    </button>
     <button class="btn" onclick="resetAll()">Reiniciar</button>
     <button class="btn primary" onclick="exportCSV()">Exportar CSV</button>
   </div>
@@ -468,7 +478,40 @@
   </div>
 </div>
 
-<!-- MODAL SETUP DE GOOGLE SHEET -->
+<!-- MODAL BIENVENIDA — elegir método de conexión -->
+<div class="modal-overlay" id="welcomeModal">
+  <div class="modal" style="max-width:500px;">
+    <h3>👋 Bienvenido al Hyrox Tracker</h3>
+    <p>Elige cómo guardar tu histórico de carreras:</p>
+
+    <!-- OPCIÓN B: OAuth -->
+    <div style="background:rgba(66,133,244,0.07);border:1px solid rgba(66,133,244,0.3);border-radius:5px;padding:14px;margin-bottom:10px;cursor:pointer;" onclick="startGoogleOAuth()" id="oauth-option">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <svg style="width:20px;height:20px;flex-shrink:0;" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:700;color:#f0f0f0;">Conectar con Google <span style="font-size:0.65rem;background:rgba(66,133,244,0.3);color:#7eb3ff;padding:2px 7px;border-radius:10px;margin-left:4px;">RECOMENDADO</span></div>
+      </div>
+      <div style="font-size:0.78rem;color:var(--muted);line-height:1.5;">✅ Un clic — sin configuración<br>✅ Tu hoja se crea automáticamente en tu Drive<br>✅ Sync automático sin abrir pestañas</div>
+      <button style="margin-top:10px;width:100%;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.06em;text-transform:uppercase;padding:9px;border-radius:3px;border:1px solid rgba(66,133,244,0.5);background:rgba(66,133,244,0.12);color:#7eb3ff;cursor:pointer;" onclick="event.stopPropagation();startGoogleOAuth()">
+        Iniciar sesión con Google →
+      </button>
+    </div>
+
+    <!-- OPCIÓN A: Manual -->
+    <div style="background:rgba(232,255,0,0.04);border:1px solid rgba(232,255,0,0.15);border-radius:5px;padding:14px;cursor:pointer;" onclick="closeWelcome();openSheetSetup();">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:0.95rem;font-weight:700;color:rgba(232,255,0,0.7);margin-bottom:6px;">📊 Usar mi propia Google Sheet</div>
+      <div style="font-size:0.78rem;color:var(--muted);line-height:1.5;">⚙ Crea tu hoja manualmente y pega el ID<br>⚙ Control total sobre tu hoja</div>
+      <button style="margin-top:10px;width:100%;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:0.82rem;letter-spacing:0.06em;text-transform:uppercase;padding:9px;border-radius:3px;border:1px solid rgba(232,255,0,0.25);background:transparent;color:rgba(232,255,0,0.55);cursor:pointer;" onclick="event.stopPropagation();closeWelcome();openSheetSetup();">
+        Configurar manualmente →
+      </button>
+    </div>
+
+    <div style="text-align:center;margin-top:10px;">
+      <button class="btn" style="font-size:0.7rem;" onclick="closeWelcome()">Usar sin Google Sheets (solo local)</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SETUP DE GOOGLE SHEET (Opción A) -->
 <div class="modal-overlay" id="setupModal">
   <div class="modal" style="max-width:480px;">
     <h3>📊 Conectar Google Sheet</h3>
@@ -714,6 +757,7 @@ async function confirmSheetSetup(){
     const data=await r.json();
     if(data.ok===false)throw new Error(data.error||'Error al leer la hoja');
     setUserSheetId(id);
+    setAuthMethod('manual');
     status.innerHTML='<span style="color:#34a853;">✓ Conectado correctamente</span>';
     setTimeout(async()=>{
       closeSheetSetup();
@@ -1432,17 +1476,372 @@ function exportCSV(){
   const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));a.download='hyrox_tiempos.csv';a.click();
 }
 
-// ── INIT ──────────────────────────────────────────────────
+// ── OAUTH CONFIG ──────────────────────────────────────────
+const GOOGLE_CLIENT_ID = '233150191523-mmahtg9ejeu42bks232te0fdebobgg7g.apps.googleusercontent.com';
+const OAUTH_SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+const AUTH_KEY = 'hyrox-oauth-token';
+const AUTH_METHOD_KEY = 'hyrox-auth-method'; // 'oauth' | 'manual'
+const OAUTH_SHEET_ID_KEY = 'hyrox-oauth-sheet-id';
+
+let oauthToken = null;
+let oauthUser = null;
+let tokenClient = null;
+
+function loadOAuthState(){
+  try{
+    const t=localStorage.getItem(AUTH_KEY);
+    const u=localStorage.getItem('hyrox-oauth-user');
+    if(t){oauthToken=t;}
+    if(u){oauthUser=JSON.parse(u);}
+  }catch(e){}
+}
+function saveOAuthState(token,user){
+  try{
+    localStorage.setItem(AUTH_KEY,token);
+    if(user)localStorage.setItem('hyrox-oauth-user',JSON.stringify(user));
+  }catch(e){}
+}
+function clearOAuthState(){
+  try{
+    localStorage.removeItem(AUTH_KEY);
+    localStorage.removeItem('hyrox-oauth-user');
+    localStorage.removeItem(OAUTH_SHEET_ID_KEY);
+    localStorage.removeItem(AUTH_METHOD_KEY);
+  }catch(e){}
+}
+function getAuthMethod(){
+  try{return localStorage.getItem(AUTH_METHOD_KEY)||'';}catch(e){return '';}
+}
+function setAuthMethod(m){
+  try{localStorage.setItem(AUTH_METHOD_KEY,m);}catch(e){}
+}
+function getOAuthSheetId(){
+  try{return localStorage.getItem(OAUTH_SHEET_ID_KEY)||'';}catch(e){return '';}
+}
+function setOAuthSheetId(id){
+  try{localStorage.setItem(OAUTH_SHEET_ID_KEY,id);}catch(e){}
+}
+
+// Obtener sheet ID según método activo
+function getActiveSheetId(){
+  const method=getAuthMethod();
+  if(method==='oauth')return getOAuthSheetId();
+  return getUserSheetId();
+}
+
+// ── GOOGLE OAUTH FLOW ─────────────────────────────────────
+function initGoogleOAuth(){
+  if(typeof google==='undefined'||!google.accounts)return;
+  tokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:GOOGLE_CLIENT_ID,
+    scope:OAUTH_SCOPES,
+    callback:(resp)=>{
+      if(resp.error){
+        showToast('Error al conectar con Google: '+resp.error,true);
+        return;
+      }
+      oauthToken=resp.access_token;
+      saveOAuthState(oauthToken,null);
+      setAuthMethod('oauth');
+      // Obtener info del usuario
+      fetchGoogleUserInfo().then(()=>{
+        updateGoogleBtn();
+        findOrCreateHyroxSheet().then(()=>{
+          closeWelcome();
+          updateSyncBar();
+          pullFromSheets();
+        });
+      });
+    },
+  });
+}
+
+function startGoogleOAuth(){
+  if(!tokenClient){
+    // Si Google Identity Services no cargó aún, esperar
+    showToast('Cargando Google…');
+    let attempts=0;
+    const wait=setInterval(()=>{
+      attempts++;
+      if(typeof google!=='undefined'&&google.accounts){
+        clearInterval(wait);
+        initGoogleOAuth();
+        setTimeout(()=>tokenClient&&tokenClient.requestAccessToken({prompt:'consent'}),200);
+      }
+      if(attempts>20){clearInterval(wait);showToast('No se pudo cargar Google. Verifica tu conexión.',true);}
+    },300);
+    return;
+  }
+  tokenClient.requestAccessToken({prompt:oauthToken?'':'consent'});
+}
+
+async function fetchGoogleUserInfo(){
+  if(!oauthToken)return;
+  try{
+    const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{
+      headers:{Authorization:'Bearer '+oauthToken}
+    });
+    if(!r.ok)return;
+    oauthUser=await r.json();
+    saveOAuthState(oauthToken,oauthUser);
+    updateGoogleBtn();
+  }catch(e){}
+}
+
+function updateGoogleBtn(){
+  const btn=document.getElementById('google-btn');
+  const txt=document.getElementById('google-btn-text');
+  if(!btn||!txt)return;
+  if(oauthToken&&oauthUser){
+    btn.className='btn google signed-in';
+    const name=oauthUser.name||oauthUser.email||'Conectado';
+    const shortName=name.split(' ')[0];
+    if(oauthUser.picture){
+      txt.innerHTML=`<img src="${oauthUser.picture}" class="google-avatar" alt=""> ${shortName}`;
+    }else{
+      txt.textContent='✓ '+shortName;
+    }
+    btn.title='Conectado como '+name+' — clic para desconectar';
+  }else{
+    btn.className='btn google';
+    txt.textContent='Conectar Google';
+    btn.title='';
+  }
+}
+
+function handleGoogleBtn(){
+  if(oauthToken&&oauthUser){
+    // Ya conectado — preguntar si desconectar
+    if(confirm('¿Desconectar tu cuenta de Google?\nTus datos locales se conservarán.')){
+      google.accounts.oauth2.revoke(oauthToken,()=>{});
+      oauthToken=null;oauthUser=null;
+      clearOAuthState();
+      updateGoogleBtn();
+      updateSyncBar();
+      showToast('Cuenta de Google desconectada');
+    }
+  }else{
+    startGoogleOAuth();
+  }
+}
+
+// ── CREAR/ENCONTRAR HOJA HYROX EN DRIVE DEL USUARIO ───────
+async function findOrCreateHyroxSheet(){
+  if(!oauthToken)return;
+  showToast('Buscando tu hoja en Google Drive…');
+  try{
+    // Buscar hoja existente creada por la app
+    const searchUrl='https://www.googleapis.com/drive/v3/files?q=name%3D%22Hyrox+Performance+Tracker%22+and+mimeType%3D%22application%2Fvnd.google-apps.spreadsheet%22+and+trashed%3Dfalse&fields=files(id,name)';
+    const sr=await fetch(searchUrl,{headers:{Authorization:'Bearer '+oauthToken}});
+    if(!sr.ok)throw new Error('HTTP '+sr.status);
+    const sd=await sr.json();
+    if(sd.files&&sd.files.length>0){
+      // Usar la primera hoja encontrada
+      const sid=sd.files[0].id;
+      setOAuthSheetId(sid);
+      showToast('✓ Hoja encontrada: "'+sd.files[0].name+'"');
+      await ensureSheetHeaders(sid);
+      return sid;
+    }
+    // No existe — crear una nueva
+    showToast('Creando tu hoja en Google Drive…');
+    const cr=await fetch('https://sheets.googleapis.com/v4/spreadsheets',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+      body:JSON.stringify({properties:{title:'Hyrox Performance Tracker'},sheets:[{properties:{title:'Hyrox'}}]})
+    });
+    if(!cr.ok)throw new Error('HTTP '+cr.status);
+    const cd=await cr.json();
+    const newId=cd.spreadsheetId;
+    setOAuthSheetId(newId);
+    await ensureSheetHeaders(newId);
+    showToast('✅ Hoja creada en tu Google Drive');
+    return newId;
+  }catch(e){
+    showToast('Error al acceder a Drive: '+e.message,true);
+  }
+}
+
+async function ensureSheetHeaders(sheetId){
+  if(!oauthToken||!sheetId)return;
+  try{
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Hyrox!A1:A1`,{
+      headers:{Authorization:'Bearer '+oauthToken}
+    });
+    const d=await r.json();
+    if(!d.values||!d.values.length){
+      const HEADERS=['Fecha','Nombre','Objetivo(min)','Total(seg)','Run(seg)','Estaciones(seg)','Roxzone(seg)',
+        'Run1','Run2','Run3','Run4','Run5','Run6','Run7','Run8',
+        'SkiErg','SledPush','SledPull','BurpeeBJ','Rowing','FarmerCarry','SandbagLunges','WallBalls',
+        'Roxzone1','Roxzone2','Roxzone3','Roxzone4','Roxzone5','Roxzone6','Roxzone7','Roxzone8'];
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Hyrox!A1:append?valueInputOption=USER_ENTERED`,{
+        method:'POST',
+        headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+        body:JSON.stringify({values:[HEADERS]})
+      });
+    }
+  }catch(e){console.warn('ensureSheetHeaders:',e);}
+}
+
+// ── OVERRIDE: pull y push con OAuth si está activo ─────────
+async function pullFromSheets(){
+  const method=getAuthMethod();
+  if(method==='oauth')return pullFromSheetsOAuth();
+  // Opción A (Apps Script)
+  const sid=getUserSheetId();
+  if(!sid){showToast('Configura primero tu Google Sheet',true);openSheetSetup();return;}
+  showToast('Leyendo Google Sheets…');
+  try{
+    const url=APPS_SCRIPT_URL+'?sheetId='+encodeURIComponent(sid);
+    const r=await fetch(url,{method:'GET',redirect:'follow'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    if(!data.ok||!Array.isArray(data.rows))throw new Error(data.error||'Respuesta inválida');
+    await mergeSheetData(data.rows);
+    if(document.getElementById('tab-history').classList.contains('active'))renderHistory();
+  }catch(e){showToast('No se pudo conectar: '+e.message,true);}
+}
+
+async function pullFromSheetsOAuth(){
+  const sid=getOAuthSheetId();
+  if(!sid||!oauthToken){showToast('Reconecta tu cuenta de Google',true);return;}
+  showToast('Leyendo tu Google Sheet…');
+  try{
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Hyrox!A2:AJ500`,{
+      headers:{Authorization:'Bearer '+oauthToken}
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const rows=d.values||[];
+    await mergeSheetData(rows);
+    if(document.getElementById('tab-history').classList.contains('active'))renderHistory();
+  }catch(e){
+    if(e.message.includes('401'))showToast('Sesión expirada — reconecta Google',true);
+    else showToast('Error al leer Sheets: '+e.message,true);
+  }
+}
+
+async function doSyncRaceFetch(race){
+  const method=getAuthMethod();
+  if(method==='oauth')return doSyncRaceOAuth(race);
+  // Opción A (Apps Script)
+  const sid=getUserSheetId();
+  if(!sid)return false;
+  const row=buildSyncRow(race);
+  try{
+    const r=await fetch(APPS_SCRIPT_URL,{
+      method:'POST',mode:'cors',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({sheetId:sid,row}),
+      redirect:'follow',
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    try{
+      const data=JSON.parse(text);
+      if(data&&data.ok===false)throw new Error(data.error||'Error en Apps Script');
+    }catch(pe){if(pe.message&&pe.message.includes('Error en'))throw pe;}
+    return true;
+  }catch(e){console.warn('Fetch POST failed:',e);return false;}
+}
+
+async function doSyncRaceOAuth(race){
+  const sid=getOAuthSheetId();
+  if(!sid||!oauthToken)return false;
+  const row=buildSyncRow(race);
+  try{
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Hyrox!A1:append?valueInputOption=USER_ENTERED`,{
+      method:'POST',
+      headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+      body:JSON.stringify({values:[row]})
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return true;
+  }catch(e){
+    console.warn('OAuth POST failed:',e);
+    if(e.message.includes('401')){showToast('Sesión expirada — reconecta Google',true);}
+    return false;
+  }
+}
+
+// ── WELCOME MODAL ─────────────────────────────────────────
+function openWelcome(){document.getElementById('welcomeModal')?.classList.add('open');}
+function closeWelcome(){document.getElementById('welcomeModal')?.classList.remove('open');}
+
+// ── OVERRIDE updateSyncBar para mostrar estado OAuth ──────
+async function updateSyncBar(){
+  const history=await loadHistory();
+  const pending=history.filter(r=>!r.synced);
+  const dot=document.getElementById('sync-dot');
+  const info=document.getElementById('sync-info');
+  const btn=document.getElementById('sync-btn');
+  const method=getAuthMethod();
+  const sid=method==='oauth'?getOAuthSheetId():getUserSheetId();
+
+  if(!sid&&!oauthToken){
+    dot.className='sync-dot pending';
+    info.innerHTML='⚠ <strong>Conecta Google</strong> para guardar tu histórico online';
+    btn.style.display='';btn.className='btn gs pending';
+    btn.textContent='⚙ Configurar';btn.onclick=openWelcome;
+  }else if(!history.length){
+    dot.className='sync-dot ok';
+    const who=method==='oauth'&&oauthUser?(' · '+((oauthUser.name||oauthUser.email||'').split(' ')[0])):'';
+    info.innerHTML='Sin carreras guardadas aún'+who;
+    btn.style.display='none';
+  }else if(pending.length){
+    dot.className='sync-dot pending';
+    info.innerHTML=`<strong>${pending.length}</strong> carrera${pending.length>1?'s':''} pendiente${pending.length>1?'s':''} · ${history.length-pending.length} en Sheets`;
+    btn.style.display='';btn.className='btn gs pending';
+    btn.textContent=`↑ Sincronizar ${pending.length}`;btn.onclick=syncPendingToSheets;
+  }else{
+    dot.className='sync-dot ok';
+    const who=method==='oauth'&&oauthUser?(' · '+(oauthUser.name||oauthUser.email||'').split(' ')[0]):'';
+    info.innerHTML=`✓ Todo sincronizado · <strong>${history.length}</strong> carrera${history.length>1?'s':''}${who}`;
+    btn.style.display='';btn.className='btn gs';btn.textContent='Abrir Sheets ↗';btn.onclick=openSheet;
+  }
+  updateBadge(history.length);
+}
+
+// Override openSheet para OAuth
+function openSheet(){
+  const method=getAuthMethod();
+  if(method==='oauth'){
+    const sid=getOAuthSheetId();
+    if(sid)window.open('https://docs.google.com/spreadsheets/d/'+sid+'/edit','_blank');
+  }else{
+    const url=getSheetUrl();
+    if(url)window.open(url,'_blank');
+    else openSheetSetup();
+  }
+}
 buildAll();setPreset(75);
+loadOAuthState();
+updateGoogleBtn();
 updateSyncBar();
 setTimeout(onUpdate,80);
-// Si ya tiene Sheet configurado, importar automáticamente
-// Si no, mostrar el modal de setup
-if(getUserSheetId()){
-  setTimeout(()=>pullFromSheets(),500);
-}else{
-  setTimeout(()=>openSheetSetup(),500);
-}
+
+// Inicializar OAuth cuando Google Identity Services cargue
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    if(typeof google!=='undefined'&&google.accounts){
+      initGoogleOAuth();
+      // Si tiene token OAuth guardado, restaurar sesión
+      if(oauthToken&&getAuthMethod()==='oauth'){
+        fetchGoogleUserInfo().then(()=>{
+          updateGoogleBtn();updateSyncBar();pullFromSheets();
+        });
+        return;
+      }
+    }
+    // Sin OAuth: checar método manual o mostrar bienvenida
+    const method=getAuthMethod();
+    if((method==='manual'||method==='')&&getUserSheetId()){
+      setAuthMethod('manual');pullFromSheets();
+    }else if(!method||(!getUserSheetId()&&!oauthToken)){
+      setTimeout(()=>openWelcome(),600);
+    }
+  },800);
+});
 </script>
 </body>
 </html>
