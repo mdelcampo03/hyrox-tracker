@@ -1429,8 +1429,13 @@ function renderChart(rs,ss,rzs,rt,st,rzt,tot,tgt,allTargets){
     chartInstance=new Chart(ctx,{type:'bar',data:{labels:[...RUNS.map(r=>r.name),...STATIONS.map(s=>s.name),...ROXZONES.map(r=>r.name)],datasets:[
       {label:'Real',data:allActual,backgroundColor:colors,borderColor:borders,borderWidth:1,borderRadius:2},
       {label:'Objetivo',data:allTargets,type:'line',borderColor:'rgba(232,255,0,0.7)',borderWidth:1.5,borderDash:[5,3],pointBackgroundColor:'rgba(232,255,0,0.7)',pointRadius:3,fill:false,order:0},
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:tc,font:{size:9},boxWidth:10}}},
-      scales:{x:{ticks:{color:tc,font:{size:9},maxRotation:60,autoSkip:false},grid:{color:gc}},y:{beginAtZero:true,ticks:{color:tc,font:{size:9},callback:v=>secToMmss(v)},grid:{color:gc}}}}});
+    ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,labels:{color:tc,font:{size:9},boxWidth:10}},
+        tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${secToMmss(c.raw)}`}}
+      },
+      scales:{x:{ticks:{color:tc,font:{size:9},maxRotation:60,autoSkip:false},grid:{color:gc}},
+              y:{beginAtZero:true,ticks:{color:tc,font:{size:9},callback:v=>secToMmss(v)},grid:{color:gc}}}}});
   }else{
     const totals=[rt,st,rzt],labels=['Running','Estaciones','Roxzones'],colorList=['rgba(77,171,247,0.85)','rgba(0,201,167,0.85)','rgba(255,159,67,0.85)'];
     const pd=totals.filter(v=>v>0),pl=labels.filter((_,i)=>totals[i]>0),pc=colorList.filter((_,i)=>totals[i]>0);
