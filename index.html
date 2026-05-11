@@ -94,7 +94,11 @@
   .chart-tab{font-family:'Barlow Condensed',sans-serif;font-size:0.76rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:7px 17px;background:transparent;border:none;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;}
   .chart-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
-  /* RADAR TOGGLES */
+  /* UNSAVED CHANGES BAR */
+  .unsaved-bar{display:none;margin:0 2rem 0.4rem;padding:8px 14px;background:rgba(232,255,0,0.06);border-radius:5px;border:1px solid rgba(232,255,0,0.25);align-items:center;gap:10px;flex-wrap:wrap;}
+  .unsaved-bar.visible{display:flex;}
+  .unsaved-info{font-family:'Barlow Condensed',sans-serif;font-size:0.75rem;color:rgba(232,255,0,0.8);flex:1;}
+  .unsaved-actions{display:flex;gap:6px;}
   .radar-toggles{display:flex;gap:6px;flex-wrap:wrap;margin-top:-2px;padding:6px 0 4px;}
   .radar-toggles[data-hidden="1"]{display:none;}
   .toggle-btn{font-family:'Barlow Condensed',sans-serif;font-size:0.66rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:5px 10px;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
@@ -214,8 +218,8 @@
     /* Target bar */
     .target-bar{margin:0 1rem 0.5rem;padding:9px 11px;gap:8px;}
     .target-label{font-size:0.65rem;}
-    .preset-row{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;width:100%;}
-    .preset-btn{padding:9px 4px;font-size:0.74rem;min-height:36px;}
+    .preset-row{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;width:100%;}
+    .preset-btn{padding:8px 3px;font-size:0.68rem;min-height:36px;}
     .target-display{font-size:1rem;}
     .target-gap{flex:1 1 100%;margin-left:0;text-align:center;font-size:0.82rem;}
 
@@ -368,14 +372,25 @@
 </div>
 <div class="parse-log" id="parseLog"></div>
 
+<!-- BARRA DE CAMBIOS SIN GUARDAR -->
+<div class="unsaved-bar" id="unsaved-bar">
+  <span class="unsaved-info">✏️ Tienes cambios sin guardar en Google Sheets</span>
+  <div class="unsaved-actions">
+    <button class="btn" style="font-size:0.68rem;padding:5px 10px;" onclick="discardChanges()">Descartar</button>
+    <button class="btn primary" style="font-size:0.68rem;padding:5px 10px;" onclick="saveCurrentToSheets()">↑ Actualizar en Sheets</button>
+  </div>
+</div>
+
 <div class="target-bar">
   <span class="target-label">Objetivo</span>
   <div class="preset-row">
+    <button class="preset-btn" id="preset-60" onclick="setPreset(60)" data-cat="Élite+">🔥 1h 00m</button>
     <button class="preset-btn" id="preset-65" onclick="setPreset(65)" data-cat="Élite">🔥 1h 05m</button>
     <button class="preset-btn" id="preset-70" onclick="setPreset(70)" data-cat="Sub-élite">⭐ 1h 10m</button>
     <button class="preset-btn active" id="preset-75" onclick="setPreset(75)" data-cat="Avanzado">🥇 1h 15m</button>
     <button class="preset-btn" id="preset-80" onclick="setPreset(80)" data-cat="Intermedio+">🥈 1h 20m</button>
     <button class="preset-btn" id="preset-85" onclick="setPreset(85)" data-cat="Intermedio">🥉 1h 25m</button>
+    <button class="preset-btn" id="preset-90" onclick="setPreset(90)" data-cat="Principiante+">💪 1h 30m</button>
     <button class="preset-btn" id="preset-95" onclick="setPreset(95)" data-cat="Principiante">💪 1h 35m</button>
     <button class="preset-btn" id="preset-105" onclick="setPreset(105)" data-cat="Completar">✅ 1h 45m</button>
   </div>
@@ -630,11 +645,13 @@ const HYROX_ORDER=[
 // Lógica: run/km ≈ total*0.453/8, roxzone ≈ run/7, estaciones distribuidas con pesos relativos
 // (SkiErg/SledPush/SledPull/Row=1.0, Burpee/Sandbag/Walls=1.15, Farmers=0.73)
 const PRESET_TARGETS={
+  60:{runs:[204,204,204,204,204,204,204,204],stations:[212,212,212,244,212,155,244,244],roxzones:[29,29,29,29,29,29,29,29]},
   65:{runs:[221,221,221,221,221,221,221,221],stations:[229,229,229,264,229,167,264,264],roxzones:[32,32,32,32,32,32,32,32]},
   70:{runs:[238,238,238,238,238,238,238,238],stations:[247,247,247,285,247,180,285,285],roxzones:[34,34,34,34,34,34,34,34]},
   75:{runs:[255,255,255,255,255,255,255,255],stations:[265,265,265,306,265,193,306,306],roxzones:[36,36,36,36,36,36,36,36]},
   80:{runs:[272,272,272,272,272,272,272,272],stations:[282,282,282,326,282,206,326,326],roxzones:[39,39,39,39,39,39,39,39]},
   85:{runs:[289,289,289,289,289,289,289,289],stations:[300,300,300,346,300,219,346,346],roxzones:[41,41,41,41,41,41,41,41]},
+  90:{runs:[306,306,306,306,306,306,306,306],stations:[318,318,318,366,318,231,366,366],roxzones:[44,44,44,44,44,44,44,44]},
   95:{runs:[323,323,323,323,323,323,323,323],stations:[336,336,336,387,336,245,387,387],roxzones:[46,46,46,46,46,46,46,46]},
   105:{runs:[357,357,357,357,357,357,357,357],stations:[371,371,371,427,371,270,427,427],roxzones:[51,51,51,51,51,51,51,51]},
 };
@@ -1072,7 +1089,7 @@ function buildRow(item,container,type){
     </div>
   </div>`;
   container.appendChild(div);
-  div.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{inp.classList.remove('filled');onUpdate();}));
+  div.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{inp.classList.remove('filled');onUpdate();markUnsaved();}));
 }
 function buildAll(){
   RUNS.forEach(r=>buildRow(r,document.getElementById('run-inputs'),'run'));
@@ -1199,8 +1216,10 @@ async function loadRace(id){
   race.stations.forEach((s,i)=>setSec('s'+(i+1),s));
   if(race.roxzones)race.roxzones.forEach((s,i)=>setSec('rz'+(i+1),s));
   setPreset(race.preset||75);onUpdate();
+  loadedRaceId=id;// trackear carrera cargada para updates
+  clearUnsaved();// limpiar estado de cambios al cargar
   document.querySelectorAll('.main-tab')[0].click();
-  showToast('"'+race.name+'" cargada en el tracker');
+  showToast('"'+race.name+'" cargada — edita y usa "↑ Actualizar en Sheets" para guardar cambios');
 }
 async function deleteRace(id){
   let h=await loadHistory();h=h.filter(r=>r.id!==id);
@@ -1459,8 +1478,66 @@ function toggleRadar(which,btn){
   btn.classList.toggle('active');
   onUpdate();
 }
+// ── CAMBIOS SIN GUARDAR ───────────────────────────────────
+let hasUnsavedChanges=false;
+let loadedRaceId=null;
+
+function markUnsaved(){
+  const hasData=[...RUNS,...STATIONS,...ROXZONES].some(r=>getSec(r.id)>0);
+  if(!hasData)return;
+  hasUnsavedChanges=true;
+  document.getElementById('unsaved-bar')?.classList.add('visible');
+}
+function clearUnsaved(){
+  hasUnsavedChanges=false;
+  document.getElementById('unsaved-bar')?.classList.remove('visible');
+}
+function discardChanges(){
+  if(loadedRaceId){loadRace(loadedRaceId);}
+  else{resetAll();}
+  clearUnsaved();
+}
+async function saveCurrentToSheets(){
+  const rs=RUNS.map(r=>getSec(r.id));
+  const ss=STATIONS.map(s=>getSec(s.id));
+  const rzs=ROXZONES.map(r=>getSec(r.id));
+  const rt=rs.reduce((a,b)=>a+b,0),st=ss.reduce((a,b)=>a+b,0),rzt=rzs.reduce((a,b)=>a+b,0),tot=rt+st+rzt;
+  if(tot===0){showToast('No hay tiempos para guardar',true);return;}
+  const method=getAuthMethod();
+  const sid=method==='oauth'?getOAuthSheetId():getUserSheetId();
+  if(!sid&&!oauthToken){showToast('Conecta tu Google Sheet primero',true);openWelcome();return;}
+  if(loadedRaceId){
+    await updateRaceInSheets(loadedRaceId,rs,ss,rzs,rt,st,rzt,tot);
+  }else{
+    pendingFile='manual_'+Date.now();
+    document.getElementById('raceName').value='';
+    document.getElementById('nameModal').classList.add('open');
+    setTimeout(()=>document.getElementById('raceName').focus(),60);
+  }
+}
+async function updateRaceInSheets(raceId,rs,ss,rzs,rt,st,rzt,tot){
+  const history=await loadHistory();
+  const idx=history.findIndex(r=>r.id===raceId);
+  const race=idx>=0?{...history[idx],runs:rs,stations:ss,roxzones:rzs,runTotal:rt,stationTotal:st,roxzoneTotal:rzt,total:tot,synced:false}
+    :{id:raceId,name:'Carrera editada',date:Date.now(),preset:currentPreset,runs:rs,stations:ss,roxzones:rzs,runTotal:rt,stationTotal:st,roxzoneTotal:rzt,total:tot,synced:false};
+  if(idx>=0)history[idx]=race;else history.unshift(race);
+  await saveHistory(history);
+  showToast('Actualizando en Google Sheets…');
+  const method=getAuthMethod();
+  const ok=method==='oauth'?await doSyncRaceOAuth(race):await doSyncRaceFetch(race);
+  if(ok){
+    if(idx>=0){history[idx].synced=true;await saveHistory(history);}
+    clearUnsaved();await updateSyncBar();
+    showToast('✓ Actualizado en Google Sheets');
+  }else{
+    if(method!=='oauth')showSyncLinks([race]);
+    else showToast('Error al actualizar en Sheets',true);
+  }
+}
+
 function resetAll(updateUI=true){
   [...RUNS,...STATIONS,...ROXZONES].forEach(item=>['_m','_s'].forEach(suf=>{const el=document.getElementById(item.id+suf);if(el){el.value='';el.classList.remove('filled');}}));
+  clearUnsaved();loadedRaceId=null;
   if(updateUI){setStatus('Sin archivo');document.getElementById('parseLog').style.display='none';onUpdate();}
 }
 function exportCSV(){
