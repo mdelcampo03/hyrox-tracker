@@ -1,0 +1,35 @@
+{
+  "name": "Hyrox Performance Tracker",
+  "short_name": "Hyrox Tracker",
+  "description": "Analiza y compara tus tiempos de carrera Hyrox por segmento",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a0b",
+  "theme_color": "#e8ff00",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "fitness", "health"],
+  "screenshots": [
+    {
+      "src": "img/screenshot-tracker.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tracker de actividad Hyrox"
+    }
+  ]
+}
