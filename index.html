@@ -7,6 +7,7 @@
 <!-- Google Identity Services para OAuth -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -358,11 +359,11 @@
 
 <div class="import-zone">
   <div class="drop-area" id="dropArea">
-    <input type="file" id="fileInput" accept=".fit,.gpx,.tcx" onchange="handleFile(this.files[0])">
+    <input type="file" id="fileInput" accept=".fit,.gpx,.tcx,.zip" onchange="handleFile(this.files[0])">
     <div class="drop-icon">📂</div>
     <div class="drop-text">
-      <strong>Arrastra aquí tu archivo .fit / .gpx / .tcx</strong>
-      <span>Los laps se asignan automáticamente y se guardan en el histórico local</span>
+      <strong>Arrastra aquí tu archivo .fit / .zip / .gpx / .tcx</strong>
+      <span>Los archivos .zip de Garmin se extraen automáticamente</span>
     </div>
     <div class="import-status" id="importStatus">Sin archivo</div>
   </div>
@@ -602,7 +603,7 @@ function openInBrowser(ev,url){
 }
 
 // ── SYNC A SHEETS via link directo ───────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyV12jAGzsAusGlWMZV2gxoBwR-z3qUOb_FDsOhYsp6agk4vYA2Hh6bCYaMNTgIpkxVaQ/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytNQT8-1k5WojnabZNw1UicEzuYk9GRdTedVboOaKavput_RTmEFH-Z5D2u_ITW5gQ/exec';
 const STORAGE_KEY = 'hyrox-history-v2';
 const SHEET_ID_KEY = 'hyrox-sheet-id';
 
@@ -655,7 +656,6 @@ const ROXZONES=[
   {id:'rz5',name:'Roxzone 5',sub:'Run5 → Row'},
   {id:'rz6',name:'Roxzone 6',sub:'Run6 → Farmers'},
   {id:'rz7',name:'Roxzone 7',sub:'Run7 → Sandbag'},
-  {id:'rz8',name:'Roxzone 8',sub:'Run8 → Wall Balls'},
 ];
 const HYROX_ORDER=[
   {seg:'r1'},{seg:'s1'},{seg:'r2'},{seg:'s2'},{seg:'r3'},{seg:'s3'},{seg:'r4'},{seg:'s4'},
@@ -665,15 +665,15 @@ const HYROX_ORDER=[
 // Lógica: run/km ≈ total*0.453/8, roxzone ≈ run/7, estaciones distribuidas con pesos relativos
 // (SkiErg/SledPush/SledPull/Row=1.0, Burpee/Sandbag/Walls=1.15, Farmers=0.73)
 const PRESET_TARGETS={
-  60:{runs:[204,204,204,204,204,204,204,204],stations:[212,212,212,244,212,155,244,244],roxzones:[29,29,29,29,29,29,29,29]},
-  65:{runs:[221,221,221,221,221,221,221,221],stations:[229,229,229,264,229,167,264,264],roxzones:[32,32,32,32,32,32,32,32]},
-  70:{runs:[238,238,238,238,238,238,238,238],stations:[247,247,247,285,247,180,285,285],roxzones:[34,34,34,34,34,34,34,34]},
-  75:{runs:[255,255,255,255,255,255,255,255],stations:[265,265,265,306,265,193,306,306],roxzones:[36,36,36,36,36,36,36,36]},
-  80:{runs:[272,272,272,272,272,272,272,272],stations:[282,282,282,326,282,206,326,326],roxzones:[39,39,39,39,39,39,39,39]},
-  85:{runs:[289,289,289,289,289,289,289,289],stations:[300,300,300,346,300,219,346,346],roxzones:[41,41,41,41,41,41,41,41]},
-  90:{runs:[306,306,306,306,306,306,306,306],stations:[318,318,318,366,318,231,366,366],roxzones:[44,44,44,44,44,44,44,44]},
-  95:{runs:[323,323,323,323,323,323,323,323],stations:[336,336,336,387,336,245,387,387],roxzones:[46,46,46,46,46,46,46,46]},
-  105:{runs:[357,357,357,357,357,357,357,357],stations:[371,371,371,427,371,270,427,427],roxzones:[51,51,51,51,51,51,51,51]},
+  60:{runs:[204,204,204,204,204,204,204,204],stations:[216,216,216,249,216,157,249,249],roxzones:[29,29,29,29,29,29,29]},
+  65:{runs:[221,221,221,221,221,221,221,221],stations:[233,233,233,269,233,170,269,269],roxzones:[32,32,32,32,32,32,32]},
+  70:{runs:[238,238,238,238,238,238,238,238],stations:[251,251,251,290,251,183,290,290],roxzones:[34,34,34,34,34,34,34]},
+  75:{runs:[255,255,255,255,255,255,255,255],stations:[270,270,270,311,270,197,311,311],roxzones:[36,36,36,36,36,36,36]},
+  80:{runs:[272,272,272,272,272,272,272,272],stations:[287,287,287,331,287,209,331,331],roxzones:[39,39,39,39,39,39,39]},
+  85:{runs:[289,289,289,289,289,289,289,289],stations:[305,305,305,352,305,223,352,352],roxzones:[41,41,41,41,41,41,41]},
+  90:{runs:[306,306,306,306,306,306,306,306],stations:[323,323,323,372,323,235,372,372],roxzones:[44,44,44,44,44,44,44]},
+  95:{runs:[323,323,323,323,323,323,323,323],stations:[341,341,341,393,341,249,393,393],roxzones:[46,46,46,46,46,46,46]},
+  105:{runs:[357,357,357,357,357,357,357,357],stations:[377,377,377,435,377,275,435,435],roxzones:[51,51,51,51,51,51,51]},
 };
 
 let currentPreset=75, chartInstance=null, compareChartInstance=null, currentView='radar';
@@ -820,7 +820,7 @@ function buildSyncRow(race){
   return [
     fmtDate(race.date), race.name, race.preset,
     race.total, race.runTotal, race.stationTotal, race.roxzoneTotal||0,
-    ...race.runs, ...race.stations, ...(race.roxzones||new Array(8).fill(0))
+    ...race.runs, ...race.stations, ...(race.roxzones||new Array(7).fill(0))
   ];
 }
 function buildSyncUrl(race){
@@ -983,9 +983,12 @@ async function syncPendingToSheets(){
   showToast(`Sincronizando ${pending.length} carrera${pending.length>1?'s':''}…`);
   let success=0,failed=[];
   for(const race of pending){
-    const ok=await doSyncRaceFetch(race);
+    const result=await doSyncRaceFetch(race);
+    const ok=result===true||(result&&result.ok);
     if(ok){
       race.synced=true;
+      // Guardar número de fila si se devolvió
+      if(result&&result.sheetRow)race.sheetRow=result.sheetRow;
       success++;
     }else{
       failed.push(race);
@@ -994,14 +997,11 @@ async function syncPendingToSheets(){
   await saveHistory(history);
   await updateSyncBar();
   if(document.getElementById('tab-history').classList.contains('active'))renderHistory();
-
   if(success>0)showToast(`✓ ${success} carrera${success>1?'s':''} enviada${success>1?'s':''} a Sheets`);
   if(failed.length>0){
     if(IS_LOCAL){
-      // Local: el POST falló de verdad
       showToast(`✗ ${failed.length} carrera${failed.length>1?'s':''} con error — revisa la consola`,true);
     }else{
-      // En Claude: fallback con links manuales
       setTimeout(()=>showSyncLinks(failed),500);
     }
   }
@@ -1013,7 +1013,7 @@ async function mergeSheetData(sheetRows){
   let added=0;
 
   // Detectar layout: nuevo (con roxzones, 30 cols) o legacy (sin roxzones, 22 cols)
-  for(const row of sheetRows){
+  for(const [rowIdx,row] of sheetRows.entries()){
     if(!row||row.length<22)continue;
     const name=String(row[1]||'').trim();
     const total=parseInt(row[3])||0;
@@ -1022,6 +1022,7 @@ async function mergeSheetData(sheetRows){
     const exists=local.find(r=>r.name===name&&Math.abs(r.total-total)<2);
     if(exists){
       if(!exists.synced)exists.synced=true;
+      if(!exists.sheetRow)exists.sheetRow=rowIdx+2;
       continue;
     }
 
@@ -1031,36 +1032,34 @@ async function mergeSheetData(sheetRows){
       if(!isNaN(parsed))dateMs=parsed.getTime();
     }catch(e){}
 
-    // Detectar layout por longitud
-    const hasRoxzones=row.length>=30;
+    const hasRoxzones7=row.length>=29;
+    const hasRoxzones8=row.length>=31;
     let runs,stations,roxzones,runTotal,stationTotal,roxzoneTotal;
 
-    if(hasRoxzones){
-      // Layout nuevo: fecha,nombre,preset,total,runT,stT,rzT,r1-8,s1-8,rz1-8
+    if(hasRoxzones7||hasRoxzones8){
       runTotal=parseInt(row[4])||0;
       stationTotal=parseInt(row[5])||0;
       roxzoneTotal=parseInt(row[6])||0;
       runs=[7,8,9,10,11,12,13,14].map(j=>parseInt(row[j])||0);
       stations=[15,16,17,18,19,20,21,22].map(j=>parseInt(row[j])||0);
-      roxzones=[23,24,25,26,27,28,29,30].map(j=>parseInt(row[j])||0);
+      roxzones=[23,24,25,26,27,28,29].map(j=>parseInt(row[j])||0);
     }else{
-      // Layout legacy: fecha,nombre,preset,total,runT,stT,r1-8,s1-8 (sin roxzones)
       runTotal=parseInt(row[4])||0;
       stationTotal=parseInt(row[5])||0;
       runs=[6,7,8,9,10,11,12,13].map(j=>parseInt(row[j])||0);
       stations=[14,15,16,17,18,19,20,21].map(j=>parseInt(row[j])||0);
-      // Calcular roxzones derivadas: run/7 cada una
-      roxzones=runs.map(r=>r>0?Math.round(r/7):0);
+      roxzones=runs.slice(0,7).map(r=>r>0?Math.round(r/7):0);
       roxzoneTotal=roxzones.reduce((a,b)=>a+b,0);
     }
 
     local.push({
       id:Date.now()+Math.random(),
-      name, date:dateMs,
+      name,date:dateMs,
       preset:parseInt(row[2])||75,
-      total, runTotal, stationTotal, roxzoneTotal,
-      runs, stations, roxzones,
+      total,runTotal,stationTotal,roxzoneTotal,
+      runs,stations,roxzones,
       synced:true,
+      sheetRow:rowIdx+2,// fila real en la hoja (header = fila 1, datos desde fila 2)
     });
     added++;
   }
@@ -1152,17 +1151,18 @@ async function confirmSave(syncNow){
 
   if(syncNow){
     showToast('Enviando a Google Sheets…');
-    const ok=await doSyncRaceFetch(race);
+    const result=await doSyncRaceFetch(race);
+    const ok=result===true||(result&&result.ok);
     if(ok){
       history[0].synced=true;
+      // Guardar número de fila si lo devolvió
+      if(result&&result.sheetRow)history[0].sheetRow=result.sheetRow;
       await saveHistory(history);
       await updateSyncBar();
       showToast('✓ Guardado y sincronizado en Google Sheets');
     }else if(IS_LOCAL){
-      // Si estamos local y el POST falló de verdad, mostrar error real
       showToast('✗ Error al sincronizar — revisa la consola',true);
     }else{
-      // En Claude, el POST está bloqueado por CSP — usar fallback de link
       showToast('Conexión bloqueada — usando link manual',true);
       setTimeout(()=>showSyncLinks([race]),300);
     }
@@ -1234,7 +1234,11 @@ async function loadRace(id){
   resetAll(false);
   race.runs.forEach((s,i)=>setSec('r'+(i+1),s));
   race.stations.forEach((s,i)=>setSec('s'+(i+1),s));
-  if(race.roxzones)race.roxzones.forEach((s,i)=>setSec('rz'+(i+1),s));
+  if(race.roxzones){
+    race.roxzones.slice(0,7).forEach((s,i)=>setSec('rz'+(i+1),s));
+  }
+  // Limpiar rz8 si existía en datos anteriores
+  setSec('rz8',0);document.getElementById('rz8_m')&&(document.getElementById('rz8_m').value='');document.getElementById('rz8_s')&&(document.getElementById('rz8_s').value='');
   setPreset(race.preset||75);onUpdate();
   loadedRaceId=id;
   clearUnsaved();
@@ -1293,14 +1297,48 @@ dropArea.addEventListener('dragover',e=>{e.preventDefault();dropArea.classList.a
 dropArea.addEventListener('dragleave',()=>dropArea.classList.remove('drag-over'));
 dropArea.addEventListener('drop',e=>{e.preventDefault();dropArea.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
 function handleFile(file){
-  if(!file)return;const name=file.name.toLowerCase();
+  if(!file)return;
+  const name=file.name.toLowerCase();
   setStatus('Leyendo...','loading');
   document.getElementById('parseLog').innerHTML='';document.getElementById('parseLog').style.display='none';
+
+  // ZIP → extraer y buscar archivo de actividad dentro
+  if(name.endsWith('.zip')){handleZip(file);return;}
+
   const reader=new FileReader();
   if(name.endsWith('.gpx')){reader.onload=e=>parseGPX(e.target.result,file.name);reader.readAsText(file);}
   else if(name.endsWith('.tcx')){reader.onload=e=>parseTCX(e.target.result,file.name);reader.readAsText(file);}
   else if(name.endsWith('.fit')){reader.onload=e=>parseFIT(e.target.result,file.name);reader.readAsArrayBuffer(file);}
-  else setStatus('Formato no soportado','err');
+  else setStatus('Formato no soportado (.fit .zip .gpx .tcx)','err');
+}
+
+async function handleZip(file){
+  setStatus('Extrayendo ZIP...','loading');
+  try{
+    if(typeof JSZip==='undefined')throw new Error('JSZip no disponible — recarga la página');
+    const zip=await JSZip.loadAsync(file);
+    const entries=Object.keys(zip.files).filter(n=>!zip.files[n].dir);
+    // Prioridad: .fit > .gpx > .tcx
+    const fitFile=entries.find(n=>n.toLowerCase().endsWith('.fit'));
+    const gpxFile=entries.find(n=>n.toLowerCase().endsWith('.gpx'));
+    const tcxFile=entries.find(n=>n.toLowerCase().endsWith('.tcx'));
+    const target=fitFile||gpxFile||tcxFile;
+    if(!target){setStatus('El ZIP no contiene .fit, .gpx ni .tcx','err');return;}
+    setStatus('Extrayendo '+target.split('/').pop()+'...','loading');
+    const ext=target.toLowerCase().split('.').pop();
+    const fname=target.split('/').pop();
+    const entry=zip.files[target];
+    if(ext==='fit'){
+      const buf=await entry.async('arraybuffer');
+      parseFIT(buf,fname);
+    }else if(ext==='gpx'){
+      const txt=await entry.async('string');
+      parseGPX(txt,fname);
+    }else if(ext==='tcx'){
+      const txt=await entry.async('string');
+      parseTCX(txt,fname);
+    }
+  }catch(e){setStatus('Error al extraer ZIP: '+e.message,'err');}
 }
 function parseGPX(text,fname){
   try{const doc=new DOMParser().parseFromString(text,'application/xml');const laps=[];
@@ -1346,8 +1384,9 @@ function fillInOrder(lapTimes,fname){
   const laps=lapTimes.slice(0,16);
   laps.forEach((t,i)=>{const seg=HYROX_ORDER[i];if(seg)setSec(seg.seg,t);});
 
-  // Calcular roxzones: cada run / 7 → ese tiempo se resta de la estación siguiente
-  for(let i=0;i<8;i++){
+  // Calcular roxzones: run/7 → restar de la estación siguiente
+  // Solo 7 roxzones (rz1-rz7): después de Wall Balls no hay roxzone
+  for(let i=0;i<7;i++){
     const runId='r'+(i+1);
     const stationId='s'+(i+1);
     const roxId='rz'+(i+1);
@@ -1360,6 +1399,8 @@ function fillInOrder(lapTimes,fname){
       setSec(stationId,stationSecAdjusted);
     }
   }
+  // Estación 8 (Wall Balls): sin roxzone, solo restar 0
+  // El tiempo de s8 queda tal como viene del .fit
 
   onUpdate();
   const short=fname.split(/[/\\]/).pop().replace(/\.[^.]+$/,'');
@@ -1567,20 +1608,31 @@ async function saveCurrentToSheets(){
 async function updateRaceInSheets(raceId,rs,ss,rzs,rt,st,rzt,tot){
   const history=await loadHistory();
   const idx=history.findIndex(r=>r.id===raceId);
-  const race=idx>=0?{...history[idx],runs:rs,stations:ss,roxzones:rzs,runTotal:rt,stationTotal:st,roxzoneTotal:rzt,total:tot,synced:false}
-    :{id:raceId,name:'Carrera editada',date:Date.now(),preset:currentPreset,runs:rs,stations:ss,roxzones:rzs,runTotal:rt,stationTotal:st,roxzoneTotal:rzt,total:tot,synced:false};
+  const existing=idx>=0?history[idx]:null;
+  const race={
+    ...(existing||{id:raceId,name:'Carrera editada',date:Date.now(),preset:currentPreset}),
+    runs:rs,stations:ss,roxzones:rzs,runTotal:rt,stationTotal:st,roxzoneTotal:rzt,total:tot,synced:false,
+    sheetRow:existing?.sheetRow||null,// preservar número de fila si existe
+  };
   if(idx>=0)history[idx]=race;else history.unshift(race);
   await saveHistory(history);
-  showToast('Actualizando en Google Sheets…');
+  showToast(race.sheetRow?'Actualizando fila en Google Sheets…':'Enviando a Google Sheets…');
   const method=getAuthMethod();
-  const ok=method==='oauth'?await doSyncRaceOAuth(race):await doSyncRaceFetch(race);
+  const result=method==='oauth'?await doSyncRaceOAuth(race):await doSyncRaceFetch(race);
+  const ok=result===true||(result&&result.ok);
   if(ok){
-    if(idx>=0){history[idx].synced=true;await saveHistory(history);}
+    const i=history.findIndex(r=>r.id===raceId);
+    if(i>=0){
+      history[i].synced=true;
+      // Guardar número de fila si se devolvió (en el primer append)
+      if(result&&result.sheetRow&&!history[i].sheetRow)history[i].sheetRow=result.sheetRow;
+      await saveHistory(history);
+    }
     clearUnsaved();await updateSyncBar();
-    showToast('✓ Actualizado en Google Sheets');
+    showToast('✓ '+(race.sheetRow?'Actualizado':'Guardado')+' en Google Sheets');
   }else{
     if(method!=='oauth')showSyncLinks([race]);
-    else showToast('Error al actualizar en Sheets',true);
+    else showToast('Error al '+(race.sheetRow?'actualizar':'guardar')+' en Sheets',true);
   }
 }
 
@@ -1805,7 +1857,7 @@ async function ensureSheetHeaders(sheetId){
       const HEADERS=['Fecha','Nombre','Objetivo(min)','Total(seg)','Run(seg)','Estaciones(seg)','Roxzone(seg)',
         'Run1','Run2','Run3','Run4','Run5','Run6','Run7','Run8',
         'SkiErg','SledPush','SledPull','BurpeeBJ','Rowing','FarmerCarry','SandbagLunges','WallBalls',
-        'Roxzone1','Roxzone2','Roxzone3','Roxzone4','Roxzone5','Roxzone6','Roxzone7','Roxzone8'];
+        'Roxzone1','Roxzone2','Roxzone3','Roxzone4','Roxzone5','Roxzone6','Roxzone7'];
       await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Hyrox!A1:append?valueInputOption=USER_ENTERED`,{
         method:'POST',
         headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
@@ -1860,11 +1912,15 @@ async function doSyncRaceFetch(race){
   const sid=getUserSheetId();
   if(!sid)return false;
   const row=buildSyncRow(race);
+  // Si la carrera ya tiene un sheetRow guardado → UPDATE, si no → APPEND
+  const payload=race.sheetRow
+    ?{sheetId:sid,row,rowIndex:race.sheetRow}
+    :{sheetId:sid,row};
   try{
     const r=await fetch(APPS_SCRIPT_URL,{
       method:'POST',mode:'cors',
       headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify({sheetId:sid,row}),
+      body:JSON.stringify(payload),
       redirect:'follow',
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -1872,6 +1928,10 @@ async function doSyncRaceFetch(race){
     try{
       const data=JSON.parse(text);
       if(data&&data.ok===false)throw new Error(data.error||'Error en Apps Script');
+      // Guardar número de fila devuelto por el Apps Script (si lo devuelve)
+      if(data&&data.rowIndex&&!race.sheetRow){
+        return{ok:true,sheetRow:data.rowIndex};
+      }
     }catch(pe){if(pe.message&&pe.message.includes('Error en'))throw pe;}
     return true;
   }catch(e){console.warn('Fetch POST failed:',e);return false;}
@@ -1882,15 +1942,32 @@ async function doSyncRaceOAuth(race){
   if(!sid||!oauthToken)return false;
   const row=buildSyncRow(race);
   try{
-    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Hyrox!A1:append?valueInputOption=USER_ENTERED`,{
+    // Si la carrera ya tiene número de fila → UPDATE esa fila exacta
+    if(race.sheetRow){
+      const range=`Hyrox!A${race.sheetRow}:AZ${race.sheetRow}`;
+      const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,{
+        method:'PUT',
+        headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+        body:JSON.stringify({values:[row]})
+      });
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return true;
+    }
+    // Sin número de fila → APPEND y capturar la fila donde quedó
+    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent('Hyrox!A1')}:append?valueInputOption=USER_ENTERED&includeValuesInResponse=false`,{
       method:'POST',
       headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
       body:JSON.stringify({values:[row]})
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
-    return true;
+    const d=await r.json();
+    // Extraer número de fila del updatedRange devuelto (ej: "Hyrox!A5:AZ5" → 5)
+    const updatedRange=d.updates?.updatedRange||'';
+    const matchRow=updatedRange.match(/!A(\d+)/);
+    const sheetRow=matchRow?parseInt(matchRow[1]):null;
+    return{ok:true,sheetRow};
   }catch(e){
-    console.warn('OAuth POST failed:',e);
+    console.warn('OAuth sync failed:',e);
     if(e.message.includes('401')){showToast('Sesión expirada — reconecta Google',true);}
     return false;
   }
