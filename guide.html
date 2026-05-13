@@ -502,36 +502,40 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
 
   <div class="img-grid">
     <div>
-      <div class="img-placeholder">
-        <span class="img-ph-icon">🔑</span>
-        <span class="img-ph-name">img/oauth-pantalla-google.png</span>
-        <span class="img-ph-desc">Pantalla de autorización de Google OAuth mostrando los permisos solicitados</span>
+      <div class="img-wrap">
+        <img src="img/oauth-solicitud-correo.png" alt="Pantalla de Google pidiendo el correo electrónico">
       </div>
-      <div class="img-caption">Fig 8 — Pantalla de autorización Google</div>
+      <div class="img-caption">Fig 8 — Paso 1 · Ingresar correo de Google</div>
     </div>
     <div>
-      <div class="img-placeholder">
-        <span class="img-ph-icon">⚠️</span>
-        <span class="img-ph-name">img/oauth-no-verificada.png</span>
-        <span class="img-ph-desc">Pantalla de advertencia "app no verificada" de Google con opción Configuración avanzada</span>
+      <div class="img-wrap">
+        <img src="img/oauth-solicitud-pwd.png" alt="Pantalla de Google pidiendo la contraseña">
       </div>
-      <div class="img-caption">Fig 9 — Aviso app no verificada (solo primera vez)</div>
+      <div class="img-caption">Fig 9 — Paso 2 · Ingresar contraseña</div>
     </div>
     <div>
-      <div class="img-placeholder">
-        <span class="img-ph-icon">👤</span>
-        <span class="img-ph-name">img/oauth-conectado.png</span>
-        <span class="img-ph-desc">Header de la app mostrando foto de perfil y nombre del usuario conectado</span>
+      <div class="img-wrap">
+        <img src="img/oauth-no-verificada.png" alt="Aviso Google no verificó esta app">
       </div>
-      <div class="img-caption">Fig 10 — Usuario conectado con Google</div>
+      <div class="img-caption">Fig 10 — Paso 3 · Aviso "app no verificada" (solo primera vez)</div>
     </div>
     <div>
-      <div class="img-placeholder">
-        <span class="img-ph-icon">📂</span>
-        <span class="img-ph-name">img/sheet-creada-drive.png</span>
-        <span class="img-ph-desc">Google Drive mostrando la hoja "Hyrox Performance Tracker" creada automáticamente</span>
+      <div class="img-wrap">
+        <img src="img/oauth-pantalla-google.png" alt="Pantalla de autorización de permisos">
       </div>
-      <div class="img-caption">Fig 11 — Hoja creada automáticamente en Drive</div>
+      <div class="img-caption">Fig 11 — Paso 4 · Autorizar permisos de Drive y Sheets</div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="img/oauth-conectado.png" alt="Cuenta de Google conectada en el header del tracker">
+      </div>
+      <div class="img-caption">Fig 14 — Paso 5 · Usuario conectado en la app</div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="img/sheet-creada-drive.png" alt="Hoja Hyrox Performance Tracker creada en Google Drive">
+      </div>
+      <div class="img-caption">Fig 15 — Paso 6 · Hoja creada automáticamente en Drive</div>
     </div>
   </div>
 
@@ -571,7 +575,7 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
     <span class="img-ph-name">img/app-overview.png</span>
     <span class="img-ph-desc">Vista general de la aplicación con todos los componentes visibles: header, barra de sync, área de carga, objetivo, gráfica radar y panel de inputs</span>
   </div>
-  <div class="img-caption" style="margin-top:-24px;margin-bottom:32px;">Fig 12 — Vista general del Hyrox Tracker</div>
+  <div class="img-caption" style="margin-top:-24px;margin-bottom:32px;">Fig 14 — Vista general del Hyrox Tracker</div>
     <div class="tl-item">
       <div class="tl-dot active"></div>
       <div class="tl-label">Paso 1 — Primera vez</div>
@@ -687,7 +691,7 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
           <span class="img-ph-name">img/target-bar.png</span>
           <span class="img-ph-desc">Barra de objetivo con los 9 presets y el indicador de diferencia vs objetivo</span>
         </div>
-        <div class="img-caption">Fig 13 — Barra de tiempo objetivo</div>
+        <div class="img-caption">Fig 15 — Barra de tiempo objetivo</div>
       </div>
     </div>
 
@@ -708,7 +712,7 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
           <span class="img-ph-name">img/resumen-metricas.png</span>
           <span class="img-ph-desc">Las 4 celdas de resumen con tiempos reales y objetivos debajo en amarillo</span>
         </div>
-        <div class="img-caption">Fig 14 — Celdas de resumen</div>
+        <div class="img-caption">Fig 16 — Celdas de resumen</div>
       </div>
     </div>
 
@@ -722,10 +726,10 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
         <strong>Barras:</strong> comparación segmento a segmento con la línea de objetivo superpuesta. Útil para identificar exactamente qué estación o run tuvo el mayor desvío.<br><br>
         <strong>Distribución:</strong> dona con la proporción del tiempo total entre Running, Estaciones y Roxzones. El tooltip muestra tiempo exacto y porcentaje al pasar el mouse.
         <div class="img-grid" style="margin-top:16px;">
-          <div><div class="img-placeholder"><span class="img-ph-icon">🕸️</span><span class="img-ph-name">img/grafica-radar.png</span><span class="img-ph-desc">Gráfica radar con datos reales y línea de objetivo amarilla</span></div><div class="img-caption">Fig 15 — Radar</div></div>
-          <div><div class="img-placeholder"><span class="img-ph-icon">📈</span><span class="img-ph-name">img/grafica-barras.png</span><span class="img-ph-desc">Gráfica de barras por segmento con línea de objetivo</span></div><div class="img-caption">Fig 16 — Barras</div></div>
-          <div><div class="img-placeholder"><span class="img-ph-icon">🍩</span><span class="img-ph-name">img/grafica-distribucion.png</span><span class="img-ph-desc">Gráfica tipo dona con distribución de tiempo</span></div><div class="img-caption">Fig 17 — Distribución</div></div>
-          <div><div class="img-placeholder"><span class="img-ph-icon">📡</span><span class="img-ph-name">img/radar-normalizado.png</span><span class="img-ph-desc">Radar en modo normalizado % del objetivo</span></div><div class="img-caption">Fig 18 — Radar normalizado</div></div>
+          <div><div class="img-placeholder"><span class="img-ph-icon">🕸️</span><span class="img-ph-name">img/grafica-radar.png</span><span class="img-ph-desc">Gráfica radar con datos reales y línea de objetivo amarilla</span></div><div class="img-caption">Fig 17 — Radar</div></div>
+          <div><div class="img-placeholder"><span class="img-ph-icon">📈</span><span class="img-ph-name">img/grafica-barras.png</span><span class="img-ph-desc">Gráfica de barras por segmento con línea de objetivo</span></div><div class="img-caption">Fig 18 — Barras</div></div>
+          <div><div class="img-placeholder"><span class="img-ph-icon">🍩</span><span class="img-ph-name">img/grafica-distribucion.png</span><span class="img-ph-desc">Gráfica tipo dona con distribución de tiempo</span></div><div class="img-caption">Fig 19 — Distribución</div></div>
+          <div><div class="img-placeholder"><span class="img-ph-icon">📡</span><span class="img-ph-name">img/radar-normalizado.png</span><span class="img-ph-desc">Radar en modo normalizado % del objetivo</span></div><div class="img-caption">Fig 20 — Radar normalizado</div></div>
         </div>
       </div>
     </div>
@@ -744,7 +748,7 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
           <span class="img-ph-name">img/panel-inputs.png</span>
           <span class="img-ph-desc">Panel derecho completo con los 3 secciones de inputs (Running, Estaciones, Roxzones) y los deltas en verde/rojo</span>
         </div>
-        <div class="img-caption">Fig 19 — Panel de inputs por segmento</div>
+        <div class="img-caption">Fig 21 — Panel de inputs por segmento</div>
       </div>
     </div>
 
@@ -762,7 +766,7 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
           <span class="img-ph-name">img/barra-cambios.png</span>
           <span class="img-ph-desc">Barra amarilla con botones Descartar y ↑ Actualizar en Sheets</span>
         </div>
-        <div class="img-caption">Fig 20 — Barra de cambios sin guardar</div>
+        <div class="img-caption">Fig 22 — Barra de cambios sin guardar</div>
       </div>
     </div>
 
@@ -780,8 +784,8 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
         • Badge <span class="partial" style="color:var(--warn)">● pendiente</span> — la carrera no se ha subido aún<br><br>
         Con 2 o más carreras aparece la <strong>gráfica de evolución</strong>: barras apiladas con Running (azul), Estaciones (verde) y Roxzones (gris) por carrera, con la línea amarilla de objetivo.
         <div class="img-grid" style="margin-top:16px;">
-          <div><div class="img-placeholder tall"><span class="img-ph-icon">📋</span><span class="img-ph-name">img/historico-lista.png</span><span class="img-ph-desc">Tab Histórico con varias carreras, badges de sync y una tarjeta expandida con splits</span></div><div class="img-caption">Fig 21 — Tab Histórico</div></div>
-          <div><div class="img-placeholder tall"><span class="img-ph-icon">📉</span><span class="img-ph-name">img/grafica-evolucion.png</span><span class="img-ph-desc">Gráfica de evolución de tiempo total por carrera con barras apiladas y línea de objetivo</span></div><div class="img-caption">Fig 22 — Gráfica de evolución</div></div>
+          <div><div class="img-placeholder tall"><span class="img-ph-icon">📋</span><span class="img-ph-name">img/historico-lista.png</span><span class="img-ph-desc">Tab Histórico con varias carreras, badges de sync y una tarjeta expandida con splits</span></div><div class="img-caption">Fig 23 — Tab Histórico</div></div>
+          <div><div class="img-placeholder tall"><span class="img-ph-icon">📉</span><span class="img-ph-name">img/grafica-evolucion.png</span><span class="img-ph-desc">Gráfica de evolución de tiempo total por carrera con barras apiladas y línea de objetivo</span></div><div class="img-caption">Fig 24 — Gráfica de evolución</div></div>
         </div>
       </div>
     </div>
@@ -837,8 +841,8 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
   </div>
 
   <div class="img-grid">
-    <div><div class="img-placeholder"><span class="img-ph-icon">⌚</span><span class="img-ph-name">img/garmin-actividad.png</span><span class="img-ph-desc">Pantalla de actividad Hyrox en Garmin Connect con el menú ··· abierto</span></div><div class="img-caption">Fig 23 — Menú de actividad en Garmin</div></div>
-    <div><div class="img-placeholder"><span class="img-ph-icon">📦</span><span class="img-ph-name">img/garmin-exportar.png</span><span class="img-ph-desc">Opción "Exportar original" resaltada en el menú de Garmin Connect</span></div><div class="img-caption">Fig 24 — Exportar original</div></div>
+    <div><div class="img-placeholder"><span class="img-ph-icon">⌚</span><span class="img-ph-name">img/garmin-actividad.png</span><span class="img-ph-desc">Pantalla de actividad Hyrox en Garmin Connect con el menú ··· abierto</span></div><div class="img-caption">Fig 25 — Menú de actividad en Garmin</div></div>
+    <div><div class="img-placeholder"><span class="img-ph-icon">📦</span><span class="img-ph-name">img/garmin-exportar.png</span><span class="img-ph-desc">Opción "Exportar original" resaltada en el menú de Garmin Connect</span></div><div class="img-caption">Fig 26 — Exportar original</div></div>
   </div>
 
   <div class="callout tip">
