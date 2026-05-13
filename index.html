@@ -164,7 +164,7 @@
   .pace-seg{height:100%;transition:flex .5s ease;min-width:0;}
 
   /* ── INPUT PANEL ── */
-  .input-panel{scrollbar-width:thin;scrollbar-color:var(--surface3) transparent;}
+  .input-panel{overflow-y:auto;max-height:calc(100vh - 200px);scrollbar-width:thin;scrollbar-color:var(--surface3) transparent;}
   .input-panel::-webkit-scrollbar{width:3px;}.input-panel::-webkit-scrollbar-thumb{background:var(--border);}
   .section-block{border-bottom:1px solid var(--border);}
   .section-header{padding:10px 16px 6px;display:flex;align-items:center;gap:7px;background:var(--surface2);}
