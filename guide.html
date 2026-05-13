@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyrox Tracker — Guía de Usuario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0b;--surface:#131316;--surface2:#1c1c20;--surface3:#242428;
+  --accent:#e8ff00;--text:#f5f5f4;--muted:#a1a1a1;--faint:#6b6b6b;
+  --border:#2a2a30;--run:#4d9fff;--station:#99ff66;--roxzone:#b5b5b0;
+  --gs:#34a853;--warn:#ffb84d;--err:#ff4d6a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'Inter Tight',sans-serif;line-height:1.6;
+  background:radial-gradient(ellipse at 80% 0%,rgba(232,255,0,0.05) 0%,transparent 50%),var(--bg);}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,10,11,0.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;gap:0;overflow-x:auto;scrollbar-width:none;}
+nav::-webkit-scrollbar{display:none;}
+.nav-logo{font-family:'Archivo Black',sans-serif;font-size:14px;color:var(--accent);letter-spacing:-0.02em;text-transform:uppercase;padding:14px 24px 14px 0;border-right:1px solid var(--border);margin-right:16px;white-space:nowrap;flex-shrink:0;}
+.nav-link{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);text-decoration:none;padding:14px 12px;white-space:nowrap;transition:color .15s;border-bottom:2px solid transparent;margin-bottom:-1px;}
+.nav-link:hover{color:var(--accent);}
+.nav-link.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* LAYOUT */
+.container{max-width:900px;margin:0 auto;padding:0 32px;}
+@media(max-width:700px){.container{padding:0 16px;}nav{padding:0 16px;}.nav-logo{padding:14px 16px 14px 0;}}
+
+/* HERO */
+.hero{padding:80px 0 64px;border-bottom:1px solid var(--border);}
+.hero-badge{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);border:1px solid rgba(232,255,0,0.3);padding:4px 12px;display:inline-block;margin-bottom:20px;border-radius:2px;}
+.hero h1{font-family:'Archivo Black',sans-serif;font-size:clamp(2.5rem,8vw,5rem);letter-spacing:-0.04em;line-height:0.9;text-transform:uppercase;margin-bottom:20px;}
+.hero h1 .slash{color:var(--faint);}
+.hero h1 .hi{color:var(--accent);}
+.hero-desc{font-size:16px;color:var(--muted);max-width:560px;line-height:1.7;margin-bottom:32px;}
+.hero-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--border);background:var(--surface);border-radius:2px;color:var(--muted);}
+.chip.run{border-color:rgba(77,159,255,0.3);color:var(--run);}
+.chip.gs{border-color:rgba(52,168,83,0.3);color:var(--gs);}
+.chip.warn{border-color:rgba(255,184,77,0.3);color:var(--warn);}
+
+/* SECTIONS */
+section{padding:64px 0;border-bottom:1px solid var(--border);}
+section:last-child{border-bottom:none;}
+
+.section-eyebrow{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--accent);margin-bottom:12px;}
+.section-title{font-family:'Archivo Black',sans-serif;font-size:clamp(1.6rem,4vw,2.4rem);letter-spacing:-0.03em;text-transform:uppercase;line-height:1;margin-bottom:16px;}
+.section-desc{color:var(--muted);font-size:15px;max-width:640px;line-height:1.7;margin-bottom:40px;}
+
+.divider{display:flex;align-items:center;gap:12px;margin:40px 0 32px;}
+.divider-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);white-space:nowrap;}
+.divider-line{flex:1;height:1px;background:var(--border);}
+
+/* STEPS */
+.steps{display:flex;flex-direction:column;gap:0;}
+.step{display:grid;grid-template-columns:48px 1fr;gap:0;position:relative;}
+.step:not(:last-child)::before{content:'';position:absolute;left:23px;top:48px;bottom:0;width:1px;background:var(--border);}
+.step-num{width:48px;height:48px;background:var(--surface2);border:1px solid var(--border);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black',sans-serif;font-size:18px;color:var(--accent);flex-shrink:0;position:relative;z-index:1;}
+.step-content{padding:12px 0 40px 24px;}
+.step-title{font-family:'Archivo Black',sans-serif;font-size:15px;letter-spacing:-0.01em;text-transform:uppercase;color:var(--text);margin-bottom:8px;}
+.step-desc{font-size:14px;color:var(--muted);line-height:1.65;}
+.step-desc strong{color:var(--text);font-weight:600;}
+.step-tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:2px 8px;border-radius:2px;display:inline-block;margin-bottom:8px;}
+.step-tag.ios{background:rgba(77,159,255,0.1);color:var(--run);border:1px solid rgba(77,159,255,0.2);}
+.step-tag.android{background:rgba(52,168,83,0.1);color:var(--gs);border:1px solid rgba(52,168,83,0.2);}
+.step-tag.both{background:rgba(232,255,0,0.08);color:var(--accent);border:1px solid rgba(232,255,0,0.2);}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1px;background:var(--border);margin-bottom:32px;}
+.card{background:var(--surface);padding:24px;position:relative;}
+.card-icon{font-size:24px;margin-bottom:12px;}
+.card-title{font-family:'Archivo Black',sans-serif;font-size:14px;letter-spacing:-0.01em;text-transform:uppercase;color:var(--text);margin-bottom:8px;}
+.card-desc{font-size:13px;color:var(--muted);line-height:1.6;}
+.card-badge{position:absolute;top:16px;right:16px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:3px 8px;border-radius:2px;}
+.card-badge.rec{background:rgba(232,255,0,0.1);color:var(--accent);border:1px solid rgba(232,255,0,0.2);}
+
+/* COMPARISON TABLE */
+.compare{width:100%;border-collapse:collapse;font-size:13px;}
+.compare th{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);padding:12px 16px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface);}
+.compare td{padding:11px 16px;border-bottom:1px solid var(--border);color:var(--muted);vertical-align:top;line-height:1.5;}
+.compare td:first-child{font-weight:600;color:var(--text);white-space:nowrap;}
+.compare tr:hover td{background:var(--surface2);}
+.yes{color:var(--gs);}
+.no{color:var(--err);}
+.partial{color:var(--warn);}
+
+/* FEATURE BLOCKS */
+.features{display:flex;flex-direction:column;gap:32px;}
+.feature{display:grid;grid-template-columns:200px 1fr;gap:24px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:2px;}
+@media(max-width:600px){.feature{grid-template-columns:1fr;gap:12px;}}
+.feature-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.feature-name{font-family:'Archivo Black',sans-serif;font-size:14px;letter-spacing:-0.01em;text-transform:uppercase;color:var(--text);}
+.feature-body{font-size:13px;color:var(--muted);line-height:1.65;}
+.feature-body strong{color:var(--text);}
+.feature-body code{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--surface3);padding:1px 6px;border-radius:2px;color:var(--accent);}
+.feature-meta{display:flex;flex-direction:column;justify-content:center;}
+
+/* CALLOUTS */
+.callout{padding:16px 20px;border-left:2px solid var(--accent);background:rgba(232,255,0,0.03);margin:20px 0;border-radius:0 2px 2px 0;}
+.callout.tip{border-color:var(--gs);background:rgba(52,168,83,0.04);}
+.callout.warn{border-color:var(--warn);background:rgba(255,184,77,0.04);}
+.callout-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.callout.tip .callout-label{color:var(--gs);}
+.callout.warn .callout-label{color:var(--warn);}
+.callout-text{font-size:13px;color:var(--muted);line-height:1.6;}
+.callout-text strong{color:var(--text);}
+
+/* FLOW */
+.flow{display:flex;gap:0;flex-wrap:wrap;margin:24px 0;}
+.flow-item{display:flex;align-items:center;gap:0;}
+.flow-box{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);white-space:nowrap;}
+.flow-box.accent{background:rgba(232,255,0,0.08);border-color:rgba(232,255,0,0.3);color:var(--accent);}
+.flow-box.gs{background:rgba(52,168,83,0.08);border-color:rgba(52,168,83,0.3);color:var(--gs);}
+.flow-arrow{font-size:12px;color:var(--faint);padding:0 6px;}
+
+/* PHONE MOCKUP (simple) */
+.phones{display:flex;gap:24px;margin:32px 0;flex-wrap:wrap;}
+.phone-card{background:var(--surface);border:1px solid var(--border);padding:20px;border-radius:2px;flex:1;min-width:220px;}
+.phone-os{font-family:'Archivo Black',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:-0.01em;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.os-icon{width:20px;height:20px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;}
+.os-icon.ios{background:#000;border:1px solid var(--border);}
+.os-icon.android{background:rgba(52,168,83,0.15);}
+
+/* PRO/CON */
+.pro-con{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;}
+.pro-con-col{padding:12px 16px;border-radius:2px;}
+.pro-con-col.pro{background:rgba(52,168,83,0.06);border:1px solid rgba(52,168,83,0.2);}
+.pro-con-col.con{background:rgba(255,77,106,0.06);border:1px solid rgba(255,77,106,0.2);}
+.pro-con-label{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;}
+.pro-con-col.pro .pro-con-label{color:var(--gs);}
+.pro-con-col.con .pro-con-label{color:var(--err);}
+.pro-con-list{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.pro-con-list li{font-size:12px;color:var(--muted);line-height:1.5;padding-left:14px;position:relative;}
+.pro-con-list li::before{position:absolute;left:0;}
+.pro-con-col.pro .pro-con-list li::before{content:"✓";color:var(--gs);}
+.pro-con-col.con .pro-con-list li::before{content:"✗";color:var(--err);}
+@media(max-width:500px){.pro-con{grid-template-columns:1fr;}}
+
+/* TOC */
+.toc{background:var(--surface);border:1px solid var(--border);padding:24px;border-radius:2px;margin-bottom:48px;}
+.toc-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--faint);margin-bottom:16px;}
+.toc-list{list-style:none;display:flex;flex-direction:column;gap:6px;}
+.toc-list a{font-size:13px;color:var(--muted);text-decoration:none;display:flex;align-items:center;gap:10px;transition:color .15s;}
+.toc-list a:hover{color:var(--accent);}
+.toc-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);min-width:20px;}
+
+/* IMAGES */
+.img-wrap{margin:24px 0;border:1px solid var(--border);border-radius:2px;overflow:hidden;}
+.img-wrap img{width:100%;display:block;}
+.img-placeholder{background:var(--surface2);border:2px dashed var(--border);border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:40px 24px;margin:24px 0;text-align:center;min-height:200px;}
+.img-placeholder.tall{min-height:320px;}
+.img-placeholder.short{min-height:140px;}
+.img-ph-icon{font-size:2rem;opacity:0.4;}
+.img-ph-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);background:rgba(232,255,0,0.07);border:1px solid rgba(232,255,0,0.2);padding:4px 12px;border-radius:2px;}
+.img-ph-desc{font-family:'Inter Tight',sans-serif;font-size:12px;color:var(--faint);max-width:340px;line-height:1.5;}
+.img-caption{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);padding:8px 14px;background:var(--surface);border-top:1px solid var(--border);letter-spacing:0.06em;}
+.img-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0;}
+@media(max-width:500px){.img-grid{grid-template-columns:1fr;}}
+.timeline{position:relative;padding-left:28px;border-left:1px solid var(--border);}
+.tl-item{position:relative;padding-bottom:32px;}
+.tl-item:last-child{padding-bottom:0;}
+.tl-dot{position:absolute;left:-34px;top:4px;width:13px;height:13px;border-radius:50%;border:1px solid var(--border);background:var(--surface3);}
+.tl-dot.active{background:var(--accent);border-color:var(--accent);box-shadow:0 0 8px rgba(232,255,0,0.4);}
+.tl-label{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px;}
+.tl-title{font-family:'Archivo Black',sans-serif;font-size:14px;letter-spacing:-0.01em;text-transform:uppercase;color:var(--text);margin-bottom:6px;}
+.tl-desc{font-size:13px;color:var(--muted);line-height:1.6;}
+.tl-desc strong{color:var(--text);}
+
+/* FOOTER */
+footer{padding:48px 0;border-top:1px solid var(--border);}
+.footer-logo{font-family:'Archivo Black',sans-serif;font-size:1.5rem;color:var(--accent);letter-spacing:-0.03em;text-transform:uppercase;margin-bottom:8px;}
+.footer-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint);}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Hyrox/Tracker</div>
+  <a class="nav-link" href="#inicio">Inicio</a>
+  <a class="nav-link" href="#instalacion">Instalación</a>
+  <a class="nav-link" href="#modos">Modos</a>
+  <a class="nav-link" href="#flujo">Flujo</a>
+  <a class="nav-link" href="#funciones">Funciones</a>
+  <a class="nav-link" href="#glosario">Glosario</a>
+</nav>
+
+<div class="container">
+
+<!-- HERO -->
+<section class="hero" id="inicio">
+  <div class="hero-badge">Guía de Usuario · v1.0</div>
+  <h1>Hyrox<span class="slash">/</span><br><span class="hi">Tracker</span><br>Guide</h1>
+  <p class="hero-desc">Todo lo que necesitas saber para instalar, configurar y sacar el máximo provecho del Hyrox Performance Tracker en cualquier dispositivo.</p>
+  <div class="hero-chips">
+    <span class="chip run">iOS · Android · Desktop</span>
+    <span class="chip gs">Google Sheets Sync</span>
+    <span class="chip warn">Garmin .FIT · .ZIP</span>
+  </div>
+</section>
+
+<!-- TABLA DE CONTENIDOS -->
+<section style="padding:48px 0 0;">
+  <div class="toc">
+    <div class="toc-title">Contenido</div>
+    <ul class="toc-list">
+      <li><a href="#instalacion"><span class="toc-num">01</span> Instalación en iOS y Android</a></li>
+      <li><a href="#modos"><span class="toc-num">02</span> Modos de conexión — Local, Manual y OAuth</a></li>
+      <li><a href="#flujo"><span class="toc-num">03</span> Flujo cronológico de uso</a></li>
+      <li><a href="#funciones"><span class="toc-num">04</span> Funciones detalladas</a></li>
+      <li><a href="#garmin"><span class="toc-num">05</span> Exportar desde Garmin Connect</a></li>
+      <li><a href="#glosario"><span class="toc-num">06</span> Glosario de términos</a></li>
+    </ul>
+  </div>
+</section>
+
+<!-- INSTALACIÓN -->
+<section id="instalacion">
+  <div class="section-eyebrow">01 — Instalación</div>
+  <div class="section-title">Instalar en tu dispositivo</div>
+  <p class="section-desc">El Hyrox Tracker es una webapp progresiva (PWA). No se descarga del App Store ni Google Play — se instala directamente desde el navegador en segundos.</p>
+
+  <div class="callout">
+    <div class="callout-label">Requisito previo</div>
+    <div class="callout-text">Necesitas la URL de la aplicación: <strong>https://tu-usuario.github.io/hyrox-tracker/</strong> (o la URL que te compartieron). Ábrela en tu navegador antes de seguir los pasos.</div>
+  </div>
+
+  <div class="phones">
+    <div class="phone-card">
+      <div class="phone-os">
+        <span class="os-icon ios">🍎</span> iOS — Safari
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <span class="step-tag ios">iOS</span>
+            <div class="step-title">Abre en Safari</div>
+            <div class="step-desc">La app <strong>solo se puede instalar desde Safari</strong> en iOS. Si tienes el link en Chrome u otro browser, cópialo y ábrelo en Safari.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <span class="step-tag ios">iOS</span>
+            <div class="step-title">Botón Compartir</div>
+            <div class="step-desc">Toca el ícono de <strong>compartir</strong> en la barra inferior de Safari (cuadrado con flecha apuntando hacia arriba ↑).</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <span class="step-tag ios">iOS</span>
+            <div class="step-title">Añadir a pantalla de inicio</div>
+            <div class="step-desc">Desliza el menú hacia abajo y selecciona <strong>"Añadir a pantalla de inicio"</strong>. Edita el nombre si quieres (ej: "Hyrox Tracker") y toca <strong>Añadir</strong>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <span class="step-tag ios">iOS</span>
+            <div class="step-title">Listo</div>
+            <div class="step-desc">Aparece un ícono en tu pantalla de inicio. Al abrirlo se ejecuta en pantalla completa, sin barras de navegador, igual que una app nativa.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-card">
+      <div class="phone-os">
+        <span class="os-icon android">🤖</span> Android — Chrome
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <span class="step-tag android">Android</span>
+            <div class="step-title">Abre en Chrome</div>
+            <div class="step-desc">Abre la URL de la app en <strong>Google Chrome</strong>. Chrome detecta automáticamente que es una PWA instalable.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <span class="step-tag android">Android</span>
+            <div class="step-title">Banner de instalación</div>
+            <div class="step-desc">Chrome puede mostrar un <strong>banner automático</strong> en la parte inferior: "Añadir Hyrox Tracker a la pantalla de inicio". Toca <strong>Instalar</strong>.<br><br>
+            ⚠️ <strong>Este banner solo aparece una vez.</strong> Si lo descartaste, no vuelve a aparecer automáticamente — usa el paso 3.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <span class="step-tag android">Android</span>
+            <div class="step-title">Instalación manual (siempre disponible)</div>
+            <div class="step-desc">Si no apareció el banner o ya lo descartaste: toca los <strong>tres puntos ⋮</strong> en la esquina superior derecha → <strong>"Instalar app"</strong> o <strong>"Añadir a pantalla de inicio"</strong>. Esta opción <strong>siempre está disponible</strong> independientemente del banner.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <span class="step-tag android">Android</span>
+            <div class="step-title">Confirmar e instalar</div>
+            <div class="step-desc">Toca <strong>Instalar</strong> en el diálogo de confirmación. El ícono aparece en tu launcher como cualquier otra app.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-label">Tip</div>
+    <div class="callout-text">También puedes usar la app directamente en el navegador sin instalarla. La instalación solo añade un atajo a la pantalla de inicio y habilita el modo pantalla completa.</div>
+  </div>
+
+  <div class="img-grid">
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">📱</span>
+        <span class="img-ph-name">img/ios-share-btn.png</span>
+        <span class="img-ph-desc">Captura del botón Compartir en Safari (iOS) con la app abierta</span>
+      </div>
+      <div class="img-caption">Fig 1 — Botón Compartir en Safari · iOS</div>
+    </div>
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">📱</span>
+        <span class="img-ph-name">img/ios-add-home.png</span>
+        <span class="img-ph-desc">Menú de compartir con la opción "Añadir a pantalla de inicio" resaltada</span>
+      </div>
+      <div class="img-caption">Fig 2 — "Añadir a pantalla de inicio" · iOS</div>
+    </div>
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">🤖</span>
+        <span class="img-ph-name">img/android-install-banner.png</span>
+        <span class="img-ph-desc">Banner de instalación de Chrome en Android o menú de tres puntos ⋮</span>
+      </div>
+      <div class="img-caption">Fig 3 — Instalar app · Android Chrome</div>
+    </div>
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">🏠</span>
+        <span class="img-ph-name">img/home-screen-icon.png</span>
+        <span class="img-ph-desc">Ícono de Hyrox Tracker instalado en la pantalla de inicio</span>
+      </div>
+      <div class="img-caption">Fig 4 — Ícono en pantalla de inicio</div>
+    </div>
+  </div>
+</section>
+
+<!-- MODOS DE CONEXIÓN -->
+<section id="modos">
+  <div class="section-eyebrow">02 — Modos de conexión</div>
+  <div class="section-title">Tres maneras de usar la app</div>
+  <p class="section-desc">Cuando abres el Hyrox Tracker por primera vez, aparece un modal de bienvenida donde eliges cómo guardar tu histórico de carreras. Cada opción tiene implicaciones distintas.</p>
+
+  <div class="img-placeholder tall">
+    <span class="img-ph-icon">👋</span>
+    <span class="img-ph-name">img/modal-bienvenida.png</span>
+    <span class="img-ph-desc">Captura del modal de bienvenida mostrando las tres opciones de conexión: OAuth Google, Manual y Solo local</span>
+  </div>
+  <div class="img-caption" style="margin-top:-24px;margin-bottom:24px;">Fig 5 — Modal de bienvenida · Primera vez</div>
+
+  <!-- MODO 1: LOCAL -->
+  <div class="divider"><span class="divider-label">Modo 1</span><div class="divider-line"></div></div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">💾</div>
+      <div class="card-title">Solo local</div>
+      <div class="card-desc">Los datos se guardan únicamente en el navegador del dispositivo donde usas la app. No requiere ninguna cuenta ni configuración.</div>
+    </div>
+  </div>
+  <div class="pro-con">
+    <div class="pro-con-col pro">
+      <div class="pro-con-label">Ventajas</div>
+      <ul class="pro-con-list">
+        <li>Sin setup — funciona al instante</li>
+        <li>No necesitas cuenta de Google</li>
+        <li>Privacidad total — datos en tu dispositivo</li>
+        <li>Funciona offline</li>
+      </ul>
+    </div>
+    <div class="pro-con-col con">
+      <div class="pro-con-label">Desventajas</div>
+      <ul class="pro-con-list">
+        <li>Datos solo en ese navegador/dispositivo</li>
+        <li>Si borras el historial del navegador, pierdes el historial</li>
+        <li>No puedes ver tus carreras desde otro dispositivo</li>
+        <li>Sin respaldo externo</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout warn">
+    <div class="callout-label">Importante</div>
+    <div class="callout-text">En el modal de bienvenida, toca <strong>"Usar sin Google Sheets (solo local)"</strong>. Puedes conectar Google Sheets después en cualquier momento desde el botón <strong>⚙ Conectar mi Sheet</strong> en la barra superior.</div>
+  </div>
+
+  <!-- MODO 2: MANUAL -->
+  <div class="divider"><span class="divider-label">Modo 2</span><div class="divider-line"></div></div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <div class="card-title">Configuración manual</div>
+      <div class="card-desc">Conectas tu propia Google Sheet creada por ti. Tienes control total sobre dónde viven tus datos.</div>
+    </div>
+  </div>
+  <div class="pro-con">
+    <div class="pro-con-col pro">
+      <div class="pro-con-label">Ventajas</div>
+      <ul class="pro-con-list">
+        <li>Tus datos en tu propio Google Drive</li>
+        <li>Puedes ver y editar la hoja directamente</li>
+        <li>Sin cuentas adicionales necesarias</li>
+        <li>Sync entre dispositivos vía Sheets</li>
+      </ul>
+    </div>
+    <div class="pro-con-col con">
+      <div class="pro-con-label">Desventajas</div>
+      <ul class="pro-con-list">
+        <li>Setup inicial de ~2 minutos</li>
+        <li>La hoja debe ser pública (enlace editable)</li>
+        <li>El sync requiere abrir una pestaña adicional</li>
+        <li>Dependes del Apps Script del desarrollador</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"><span class="divider-label">Pasos de configuración manual</span><div class="divider-line"></div></div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Crear Google Sheet</div>
+        <div class="step-desc">Ve a <strong>sheets.new</strong> (o el botón "↗ Crear nueva Sheet" dentro de la app) y crea una hoja en blanco. Puedes llamarla "Hyrox Histórico".</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Compartir como editable</div>
+        <div class="step-desc">En tu hoja: <strong>Compartir → Acceso general → Cualquier persona con el enlace → Editor</strong>. Esto es necesario para que la app pueda escribir tus carreras.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Pegar URL o ID en la app</div>
+        <div class="step-desc">En la app toca <strong>⚙ Conectar mi Sheet</strong> → pega la URL completa de tu hoja (ej: <code>https://docs.google.com/spreadsheets/d/TU_ID/edit</code>) → Conectar. La app extrae el ID automáticamente y prueba la conexión.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="img-grid">
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">📊</span>
+        <span class="img-ph-name">img/modal-conectar-sheet.png</span>
+        <span class="img-ph-desc">Modal de configuración manual con los 3 pasos y el campo para pegar la URL</span>
+      </div>
+      <div class="img-caption">Fig 6 — Modal "Conectar mi Sheet"</div>
+    </div>
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">✅</span>
+        <span class="img-ph-name">img/sheet-conectado.png</span>
+        <span class="img-ph-desc">Barra de sync mostrando punto verde y mensaje de conexión exitosa</span>
+      </div>
+      <div class="img-caption">Fig 7 — Conexión exitosa · Barra de sync</div>
+    </div>
+  </div>
+
+  <!-- MODO 3: OAUTH -->
+  <div class="divider"><span class="divider-label">Modo 3</span><div class="divider-line"></div></div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">🔑</div>
+      <div class="card-title">Iniciar sesión con Google</div>
+      <div class="card-badge rec">Recomendado</div>
+      <div class="card-desc">La app se conecta con tu cuenta de Google via OAuth. Crea automáticamente tu hoja en Drive y sincroniza sin pestañas adicionales.</div>
+    </div>
+  </div>
+  <div class="pro-con">
+    <div class="pro-con-col pro">
+      <div class="pro-con-label">Ventajas</div>
+      <ul class="pro-con-list">
+        <li>Un clic — sin configuración manual</li>
+        <li>Tu hoja se crea automáticamente</li>
+        <li>Sync directo sin abrir pestañas</li>
+        <li>Sesión se restaura al reabrir la app</li>
+        <li>Hoja privada en tu Drive</li>
+      </ul>
+    </div>
+    <div class="pro-con-col con">
+      <div class="pro-con-label">Desventajas</div>
+      <ul class="pro-con-list">
+        <li>Requiere cuenta de Google</li>
+        <li>Primera vez muestra aviso "app no verificada"</li>
+        <li>El token expira — a veces hay que reconectar</li>
+        <li>Requiere conexión a internet para sync</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Aviso de app no verificada</div>
+    <div class="callout-text">La primera vez que conectas tu cuenta Google verás el mensaje <strong>"Google no ha verificado esta app"</strong>. Esto es normal para aplicaciones independientes. Toca <strong>"Configuración avanzada" → "Ir a Hyrox Tracker"</strong> para continuar. Solo ocurre una vez por cuenta.</div>
+  </div>
+
+  <div class="img-grid">
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">🔑</span>
+        <span class="img-ph-name">img/oauth-pantalla-google.png</span>
+        <span class="img-ph-desc">Pantalla de autorización de Google OAuth mostrando los permisos solicitados</span>
+      </div>
+      <div class="img-caption">Fig 8 — Pantalla de autorización Google</div>
+    </div>
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">⚠️</span>
+        <span class="img-ph-name">img/oauth-no-verificada.png</span>
+        <span class="img-ph-desc">Pantalla de advertencia "app no verificada" de Google con opción Configuración avanzada</span>
+      </div>
+      <div class="img-caption">Fig 9 — Aviso app no verificada (solo primera vez)</div>
+    </div>
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">👤</span>
+        <span class="img-ph-name">img/oauth-conectado.png</span>
+        <span class="img-ph-desc">Header de la app mostrando foto de perfil y nombre del usuario conectado</span>
+      </div>
+      <div class="img-caption">Fig 10 — Usuario conectado con Google</div>
+    </div>
+    <div>
+      <div class="img-placeholder">
+        <span class="img-ph-icon">📂</span>
+        <span class="img-ph-name">img/sheet-creada-drive.png</span>
+        <span class="img-ph-desc">Google Drive mostrando la hoja "Hyrox Performance Tracker" creada automáticamente</span>
+      </div>
+      <div class="img-caption">Fig 11 — Hoja creada automáticamente en Drive</div>
+    </div>
+  </div>
+
+  <!-- TABLA COMPARATIVA -->
+  <div class="divider"><span class="divider-label">Comparativa</span><div class="divider-line"></div></div>
+  <div style="overflow-x:auto;">
+    <table class="compare">
+      <thead>
+        <tr>
+          <th>Característica</th>
+          <th>Solo local</th>
+          <th>Manual (Sheet)</th>
+          <th>OAuth Google</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Setup inicial</td><td class="yes">Ninguno</td><td class="partial">~2 min</td><td class="partial">1 clic</td></tr>
+        <tr><td>Cuenta necesaria</td><td class="yes">No</td><td class="partial">Google (solo Drive)</td><td class="no">Google (OAuth)</td></tr>
+        <tr><td>Datos en tu Drive</td><td class="no">No</td><td class="yes">Sí (hoja propia)</td><td class="yes">Sí (automático)</td></tr>
+        <tr><td>Sync entre dispositivos</td><td class="no">No</td><td class="partial">Sí (importar manual)</td><td class="yes">Sí (automático)</td></tr>
+        <tr><td>Hoja privada</td><td>—</td><td class="no">No (enlace público)</td><td class="yes">Sí</td></tr>
+        <tr><td>Funciona offline</td><td class="yes">Sí</td><td class="partial">Local sí, sync no</td><td class="partial">Local sí, sync no</td></tr>
+        <tr><td>Sync automático al guardar</td><td>—</td><td class="partial">Semi (link extra)</td><td class="yes">Sí</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- FLUJO CRONOLÓGICO -->
+<section id="flujo">
+  <div class="section-eyebrow">03 — Flujo de uso</div>
+  <div class="section-title">Cómo usar la app paso a paso</div>
+  <p class="section-desc">Este es el flujo completo desde que abres la app por primera vez hasta que tienes tu histórico de carreras analizado y guardado.</p>
+
+  <div class="img-placeholder tall">
+    <span class="img-ph-icon">🖥️</span>
+    <span class="img-ph-name">img/app-overview.png</span>
+    <span class="img-ph-desc">Vista general de la aplicación con todos los componentes visibles: header, barra de sync, área de carga, objetivo, gráfica radar y panel de inputs</span>
+  </div>
+  <div class="img-caption" style="margin-top:-24px;margin-bottom:32px;">Fig 12 — Vista general del Hyrox Tracker</div>
+    <div class="tl-item">
+      <div class="tl-dot active"></div>
+      <div class="tl-label">Paso 1 — Primera vez</div>
+      <div class="tl-title">Elige tu modo de conexión</div>
+      <div class="tl-desc">Al abrir la app por primera vez aparece el <strong>modal de bienvenida</strong>. Elige entre OAuth (recomendado), configuración manual o solo local. Esta elección se guarda y no vuelve a aparecer.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot active"></div>
+      <div class="tl-label">Paso 2 — Configurar objetivo</div>
+      <div class="tl-title">Selecciona tu tiempo objetivo</div>
+      <div class="tl-desc">En la barra de objetivo elige el preset que corresponde a tu meta: desde <strong>🔥 1h 00m</strong> (élite) hasta <strong>✅ 1h 45m</strong> (completar). Esto calibra los tiempos de referencia para cada segmento de tu carrera.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-label">Paso 3 — Cargar actividad</div>
+      <div class="tl-title">Importar desde Garmin o ingresar manualmente</div>
+      <div class="tl-desc">
+        <strong>Desde Garmin:</strong> toca "Abrir Garmin" → busca tu carrera Hyrox → Menú ··· → Exportar original → descarga el .zip o .fit → arrástralo al área de carga de la app. El .zip se extrae automáticamente.<br><br>
+        <strong>Manualmente:</strong> escribe los tiempos directamente en los campos de cada segmento (Running, Estaciones, Roxzones).
+      </div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-label">Paso 4 — Analizar</div>
+      <div class="tl-title">Revisa tu desempeño</div>
+      <div class="tl-desc">El resumen muestra tu tiempo total real vs objetivo. Las gráficas (Radar, Barras, Distribución) muestran visualmente dónde ganaste y perdiste tiempo. Los deltas en verde/rojo al lado de cada campo indican si fuiste adelante o atrás del objetivo.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-label">Paso 5 — Guardar</div>
+      <div class="tl-title">Guardar en el histórico</div>
+      <div class="tl-desc">Al cargar un archivo aparece un modal para nombrar la carrera (ej: "Madrid 2025"). Elige <strong>"Solo guardar"</strong> para guardar localmente o <strong>"Guardar + Sync a Sheets"</strong> para subir inmediatamente a Google Sheets.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-label">Paso 6 — Comparar</div>
+      <div class="tl-title">Ver evolución en el Histórico</div>
+      <div class="tl-desc">Ve al tab <strong>Histórico</strong> para ver todas tus carreras guardadas. Con 2 o más carreras aparece automáticamente la gráfica de evolución (barras apiladas: Running / Estaciones / Roxzones vs línea de objetivo) en escala de tiempo real.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot"></div>
+      <div class="tl-label">Paso 7 — Editar (opcional)</div>
+      <div class="tl-title">Corregir tiempos de una carrera</div>
+      <div class="tl-desc">En el Histórico, toca <strong>Cargar</strong> en cualquier carrera → modifica los campos → aparece la barra amarilla <strong>"✏ Cambios sin guardar"</strong> → toca <strong>"↑ Actualizar en Sheets"</strong> para sobreescribir la fila existente (no crea una nueva).</div>
+    </div>
+  </div>
+</section>
+
+<!-- FUNCIONES DETALLADAS -->
+<section id="funciones">
+  <div class="section-eyebrow">04 — Funciones</div>
+  <div class="section-title">Guía de cada función</div>
+  <p class="section-desc">Descripción detallada de cada componente de la interfaz y cómo usarlo.</p>
+
+  <div class="features">
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Barra superior</div>
+        <div class="feature-name">Botón Google</div>
+      </div>
+      <div class="feature-body">
+        Muestra el estado de la conexión OAuth. Cuando no estás conectado muestra <strong>"Conectar Google"</strong>. Al conectar, cambia a tu foto de perfil y nombre. Toca para desconectar tu cuenta (los datos locales se conservan). Aparece en el header superior derecho en todas las vistas.
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Barra de sync</div>
+        <div class="feature-name">Estado de sincronización</div>
+      </div>
+      <div class="feature-body">
+        La barra justo debajo del header muestra el estado de sincronización con Google Sheets con un punto de color: <strong>verde</strong> = todo sincronizado, <strong>naranja</strong> = hay carreras pendientes. Botones disponibles:<br><br>
+        • <code>⚙ Conectar mi Sheet</code> — abre el modal de configuración<br>
+        • <code>↓ Importar</code> — lee y trae carreras desde tu Google Sheet<br>
+        • <code>↑ Sync a Sheets</code> — sube las carreras pendientes<br>
+        • <code>Abrir Sheets ↗</code> — abre tu hoja en una nueva pestaña
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Garmin Strip</div>
+        <div class="feature-name">Abrir Garmin</div>
+      </div>
+      <div class="feature-body">
+        El botón verde <strong>"Abrir Garmin"</strong> lleva directamente a tu lista de actividades en Garmin Connect filtrada por running. Desde ahí: toca tu carrera Hyrox → menú <strong>···</strong> → <strong>Exportar original</strong> → descarga el archivo. En móvil, el botón está programado para abrir el navegador en lugar de la app de Garmin.
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Área de carga</div>
+        <div class="feature-name">Cargar archivo</div>
+      </div>
+      <div class="feature-body">
+        Acepta archivos <code>.fit</code>, <code>.zip</code>, <code>.gpx</code> y <code>.tcx</code>. En desktop puedes arrastrar el archivo directamente. En móvil toca el área para abrir el selector de archivos (app Archivos en iOS, selector de Android).<br><br>
+        <strong>ZIP automático:</strong> si Garmin exportó un .zip, la app lo descomprime automáticamente y extrae el .fit interno. No necesitas descomprimir manualmente.<br><br>
+        Los 16 laps del archivo se asignan automáticamente: 8 runs + 8 estaciones (en orden de aparición en una carrera Hyrox). Las roxzones se calculan como <code>run ÷ 7</code> y se restan de la estación correspondiente.
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Target Bar</div>
+        <div class="feature-name">Tiempo objetivo</div>
+      </div>
+      <div class="feature-body">
+        9 presets desde 🔥 <strong>1h 00m</strong> hasta ✅ <strong>1h 45m</strong>. Al seleccionar un preset, todos los tiempos de referencia se recalculan proporcionalmente: el tiempo de running por km, la roxzone esperada por segmento, y el tiempo de cada estación ponderado por dificultad relativa (Burpee/Sandbag/Wall Balls tienen mayor peso que SkiErg/Sled/Row, y Farmers Carry el menor).<br><br>
+        El indicador a la derecha muestra en tiempo real si vas <span class="yes">bajo el objetivo</span> o <span class="no">sobre el objetivo</span> con la diferencia exacta.
+        <div class="img-placeholder short" style="margin-top:16px;">
+          <span class="img-ph-icon">🎯</span>
+          <span class="img-ph-name">img/target-bar.png</span>
+          <span class="img-ph-desc">Barra de objetivo con los 9 presets y el indicador de diferencia vs objetivo</span>
+        </div>
+        <div class="img-caption">Fig 13 — Barra de tiempo objetivo</div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Resumen</div>
+        <div class="feature-name">Métricas principales</div>
+      </div>
+      <div class="feature-body">
+        4 celdas con colores distintivos:<br><br>
+        • <strong style="color:var(--accent)">Total</strong> — tiempo completo en formato h:mm:ss<br>
+        • <strong style="color:var(--run)">Running</strong> — suma de los 8 segmentos de 1km<br>
+        • <strong style="color:var(--station)">Estaciones</strong> — suma de las 8 estaciones de trabajo (sin roxzone)<br>
+        • <strong style="color:var(--roxzone)">Roxzones</strong> — suma de las 7 transiciones<br><br>
+        Cada celda muestra el tiempo real en grande y debajo <code>obj XX:XX</code> (el tiempo objetivo para esa categoría según el preset elegido).
+        <div class="img-placeholder short" style="margin-top:16px;">
+          <span class="img-ph-icon">📊</span>
+          <span class="img-ph-name">img/resumen-metricas.png</span>
+          <span class="img-ph-desc">Las 4 celdas de resumen con tiempos reales y objetivos debajo en amarillo</span>
+        </div>
+        <div class="img-caption">Fig 14 — Celdas de resumen</div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Gráficas</div>
+        <div class="feature-name">Radar / Barras / Distribución</div>
+      </div>
+      <div class="feature-body">
+        <strong>Radar:</strong> muestra simultáneamente los 16 segmentos + la línea de objetivo. Dos toggles adicionales: <em>Mostrar Roxzones</em> (activa/desactiva las 7 roxzones del radar) y <em>Normalizado % objetivo</em> (cambia la escala de segundos absolutos a porcentaje del objetivo — 100% = exacto al objetivo, &lt;100% = más rápido).<br><br>
+        <strong>Barras:</strong> comparación segmento a segmento con la línea de objetivo superpuesta. Útil para identificar exactamente qué estación o run tuvo el mayor desvío.<br><br>
+        <strong>Distribución:</strong> dona con la proporción del tiempo total entre Running, Estaciones y Roxzones. El tooltip muestra tiempo exacto y porcentaje al pasar el mouse.
+        <div class="img-grid" style="margin-top:16px;">
+          <div><div class="img-placeholder"><span class="img-ph-icon">🕸️</span><span class="img-ph-name">img/grafica-radar.png</span><span class="img-ph-desc">Gráfica radar con datos reales y línea de objetivo amarilla</span></div><div class="img-caption">Fig 15 — Radar</div></div>
+          <div><div class="img-placeholder"><span class="img-ph-icon">📈</span><span class="img-ph-name">img/grafica-barras.png</span><span class="img-ph-desc">Gráfica de barras por segmento con línea de objetivo</span></div><div class="img-caption">Fig 16 — Barras</div></div>
+          <div><div class="img-placeholder"><span class="img-ph-icon">🍩</span><span class="img-ph-name">img/grafica-distribucion.png</span><span class="img-ph-desc">Gráfica tipo dona con distribución de tiempo</span></div><div class="img-caption">Fig 17 — Distribución</div></div>
+          <div><div class="img-placeholder"><span class="img-ph-icon">📡</span><span class="img-ph-name">img/radar-normalizado.png</span><span class="img-ph-desc">Radar en modo normalizado % del objetivo</span></div><div class="img-caption">Fig 18 — Radar normalizado</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Panel derecho</div>
+        <div class="feature-name">Inputs por segmento</div>
+      </div>
+      <div class="feature-body">
+        Tres secciones: <strong>Running splits</strong> (r1–r8), <strong>Estaciones sin roxzone</strong> (s1–s8), <strong>Roxzones</strong> (rz1–rz7). Cada campo acepta minutos y segundos separados.<br><br>
+        Al lado derecho de cada fila: tiempo actual, tiempo objetivo (<code>obj mm:ss</code> en amarillo) y delta (<span class="yes">verde si vas adelante</span>, <span class="no">rojo si vas atrás</span>).<br><br>
+        <strong>Nota Roxzone 8:</strong> la octava roxzone no existe — después de Wall Balls (última estación) no hay transición, es el final de la carrera. Por eso solo aparecen rz1–rz7.
+        <div class="img-placeholder tall" style="margin-top:16px;">
+          <span class="img-ph-icon">✍️</span>
+          <span class="img-ph-name">img/panel-inputs.png</span>
+          <span class="img-ph-desc">Panel derecho completo con los 3 secciones de inputs (Running, Estaciones, Roxzones) y los deltas en verde/rojo</span>
+        </div>
+        <div class="img-caption">Fig 19 — Panel de inputs por segmento</div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Barra amarilla</div>
+        <div class="feature-name">Cambios sin guardar</div>
+      </div>
+      <div class="feature-body">
+        Aparece automáticamente cuando modificas manualmente cualquier campo después de haber cargado una carrera. Dos opciones:<br><br>
+        • <strong>Descartar</strong> — restaura los valores originales de la carrera cargada<br>
+        • <strong>↑ Actualizar en Sheets</strong> — sobreescribe la fila existente en Google Sheets (no crea una nueva fila)
+        <div class="img-placeholder short" style="margin-top:16px;">
+          <span class="img-ph-icon">🟡</span>
+          <span class="img-ph-name">img/barra-cambios.png</span>
+          <span class="img-ph-desc">Barra amarilla con botones Descartar y ↑ Actualizar en Sheets</span>
+        </div>
+        <div class="img-caption">Fig 20 — Barra de cambios sin guardar</div>
+      </div>
+    </div>
+
+    <div class="feature">
+      <div class="feature-meta">
+        <div class="feature-label">Tab Histórico</div>
+        <div class="feature-name">Historial de carreras</div>
+      </div>
+      <div class="feature-body">
+        Lista de todas las carreras guardadas. Cada tarjeta muestra: número, fecha, nombre, splits de Running/Estaciones/Roxzones y tiempo total.<br><br>
+        • <strong>Clic en la tarjeta</strong> — expande el detalle completo split a split con deltas vs objetivo<br>
+        • <strong>Cargar</strong> — carga la carrera en el tracker para analizarla o editarla<br>
+        • <strong>✕</strong> — elimina la carrera del histórico local<br>
+        • Badge <span class="yes">● Sheets</span> — la carrera está sincronizada<br>
+        • Badge <span class="partial" style="color:var(--warn)">● pendiente</span> — la carrera no se ha subido aún<br><br>
+        Con 2 o más carreras aparece la <strong>gráfica de evolución</strong>: barras apiladas con Running (azul), Estaciones (verde) y Roxzones (gris) por carrera, con la línea amarilla de objetivo.
+        <div class="img-grid" style="margin-top:16px;">
+          <div><div class="img-placeholder tall"><span class="img-ph-icon">📋</span><span class="img-ph-name">img/historico-lista.png</span><span class="img-ph-desc">Tab Histórico con varias carreras, badges de sync y una tarjeta expandida con splits</span></div><div class="img-caption">Fig 21 — Tab Histórico</div></div>
+          <div><div class="img-placeholder tall"><span class="img-ph-icon">📉</span><span class="img-ph-name">img/grafica-evolucion.png</span><span class="img-ph-desc">Gráfica de evolución de tiempo total por carrera con barras apiladas y línea de objetivo</span></div><div class="img-caption">Fig 22 — Gráfica de evolución</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- GARMIN EXPORT -->
+<section id="garmin">
+  <div class="section-eyebrow">05 — Garmin</div>
+  <div class="section-title">Exportar desde Garmin Connect</div>
+  <p class="section-desc">Pasos para obtener el archivo de tu carrera Hyrox desde la app y web de Garmin Connect.</p>
+
+  <div class="divider"><span class="divider-label">Desde la app móvil</span><div class="divider-line"></div></div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Abre Garmin Connect</div>
+        <div class="step-desc">En la app de Garmin Connect en tu teléfono, ve a <strong>Actividades</strong> y busca tu carrera Hyrox.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Menú de la actividad</div>
+        <div class="step-desc">Abre la actividad y toca los <strong>tres puntos ···</strong> o el ícono de menú en la esquina superior derecha.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Exportar original</div>
+        <div class="step-desc">Selecciona <strong>"Exportar original"</strong>. Garmin descarga un archivo .zip que contiene el .fit de la actividad.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <div class="step-title">Cargar en el Tracker</div>
+        <div class="step-desc">Abre el Hyrox Tracker y selecciona el .zip desde tu carpeta de Descargas (o app Archivos en iOS). La app lo extrae automáticamente.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"><span class="divider-label">Desde connect.garmin.com (web)</span><div class="divider-line"></div></div>
+  <div class="flow">
+    <div class="flow-item"><div class="flow-box">Actividades</div><div class="flow-arrow">→</div></div>
+    <div class="flow-item"><div class="flow-box">Tu carrera Hyrox</div><div class="flow-arrow">→</div></div>
+    <div class="flow-item"><div class="flow-box">··· Menú</div><div class="flow-arrow">→</div></div>
+    <div class="flow-item"><div class="flow-box accent">Exportar original</div><div class="flow-arrow">→</div></div>
+    <div class="flow-item"><div class="flow-box gs">.zip descargado</div></div>
+  </div>
+
+  <div class="img-grid">
+    <div><div class="img-placeholder"><span class="img-ph-icon">⌚</span><span class="img-ph-name">img/garmin-actividad.png</span><span class="img-ph-desc">Pantalla de actividad Hyrox en Garmin Connect con el menú ··· abierto</span></div><div class="img-caption">Fig 23 — Menú de actividad en Garmin</div></div>
+    <div><div class="img-placeholder"><span class="img-ph-icon">📦</span><span class="img-ph-name">img/garmin-exportar.png</span><span class="img-ph-desc">Opción "Exportar original" resaltada en el menú de Garmin Connect</span></div><div class="img-caption">Fig 24 — Exportar original</div></div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-label">Tip</div>
+    <div class="callout-text">El botón <strong>"Abrir Garmin"</strong> en el Hyrox Tracker lleva directo a tu lista de actividades en Garmin Connect web, filtrada por running. Ahorra varios toques de navegación.</div>
+  </div>
+</section>
+
+<!-- GLOSARIO -->
+<section id="glosario">
+  <div class="section-eyebrow">06 — Glosario</div>
+  <div class="section-title">Términos clave</div>
+  <p class="section-desc">Referencia rápida de los conceptos que usa la aplicación.</p>
+
+  <div style="display:flex;flex-direction:column;gap:1px;background:var(--border);">
+    <div style="background:var(--surface);padding:16px 20px;display:grid;grid-template-columns:160px 1fr;gap:16px;">
+      <div style="font-family:'Archivo Black',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:-0.01em;color:var(--accent);">Roxzone</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Tiempo de transición entre el final de un segmento de running y el inicio de una estación de trabajo. Incluye el tiempo de caminar a la estación, esperar turno y prepararse. Se calcula como <code>tiempo_run ÷ 7</code>. Solo existen 7 roxzones (entre Run1→Run7 y sus estaciones). La estación 8 (Wall Balls) no tiene roxzone porque es el final de la carrera.</div>
+    </div>
+    <div style="background:var(--surface);padding:16px 20px;display:grid;grid-template-columns:160px 1fr;gap:16px;">
+      <div style="font-family:'Archivo Black',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:-0.01em;color:var(--run);">Lap / Split</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Segmento de tiempo registrado por el reloj GPS. Una carrera Hyrox genera 16 laps: 8 de running (1km cada uno) y 8 de estaciones de trabajo.</div>
+    </div>
+    <div style="background:var(--surface);padding:16px 20px;display:grid;grid-template-columns:160px 1fr;gap:16px;">
+      <div style="font-family:'Archivo Black',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:-0.01em;color:var(--station);">.FIT</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Formato de archivo binario de Garmin/ANT+ que contiene los datos completos de una actividad: GPS, frecuencia cardíaca, potencia, laps, etc. Es el formato nativo de los relojes Garmin.</div>
+    </div>
+    <div style="background:var(--surface);padding:16px 20px;display:grid;grid-template-columns:160px 1fr;gap:16px;">
+      <div style="font-family:'Archivo Black',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:-0.01em;color:var(--warn);">OAuth</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Protocolo de autorización que permite a la app acceder a tu Google Drive sin que le des tu contraseña. La app solo puede ver y editar los archivos que ella misma crea (permiso <code>drive.file</code>).</div>
+    </div>
+    <div style="background:var(--surface);padding:16px 20px;display:grid;grid-template-columns:160px 1fr;gap:16px;">
+      <div style="font-family:'Archivo Black',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:-0.01em;color:var(--gs);">Apps Script</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Servicio de Google que actúa como intermediario entre la app y tu Google Sheet en el modo de configuración manual. Escribe y lee filas en tu hoja. Es gratuito y funciona en la nube de Google.</div>
+    </div>
+    <div style="background:var(--surface);padding:16px 20px;display:grid;grid-template-columns:160px 1fr;gap:16px;">
+      <div style="font-family:'Archivo Black',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:-0.01em;color:var(--roxzone);">PWA</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Progressive Web App. Aplicación web que puede instalarse en la pantalla de inicio del dispositivo y funcionar como una app nativa, con pantalla completa y sin barras de navegador.</div>
+    </div>
+    <div style="background:var(--surface);padding:16px 20px;display:grid;grid-template-columns:160px 1fr;gap:16px;">
+      <div style="font-family:'Archivo Black',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:-0.01em;color:var(--accent);">Delta</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.6;">Diferencia entre tu tiempo real en un segmento y el tiempo objetivo. <span class="yes">Verde con signo —</span> significa que fuiste más rápido que el objetivo. <span class="no">Rojo con signo +</span> significa que tardaste más de lo planeado.</div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<footer>
+  <div class="container">
+    <div class="footer-logo">Hyrox/Tracker</div>
+    <div class="footer-sub">Guía de Usuario · Performance Tracking Tool · 2025</div>
+  </div>
+</footer>
+
+<script>
+// Highlight active nav link on scroll
+const sections=document.querySelectorAll('section[id]');
+const navLinks=document.querySelectorAll('.nav-link');
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      navLinks.forEach(l=>l.classList.remove('active'));
+      const active=document.querySelector(`.nav-link[href="#${e.target.id}"]`);
+      if(active)active.classList.add('active');
+    }
+  });
+},{threshold:0.3});
+sections.forEach(s=>observer.observe(s));
+</script>
+</body>
+</html>
