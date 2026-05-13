@@ -161,6 +161,9 @@ section:last-child{border-bottom:none;}
 .img-caption{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);padding:8px 14px;background:var(--surface);border-top:1px solid var(--border);letter-spacing:0.06em;}
 .img-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:24px 0;}
 @media(max-width:500px){.img-grid{grid-template-columns:1fr;}}
+.oauth-img{height:260px;display:flex;align-items:center;justify-content:center;background:var(--surface2);}
+.oauth-img img{max-height:100%;width:auto;max-width:100%;object-fit:contain;}
+@media(max-width:500px){.oauth-img{height:300px;}}
 .timeline{position:relative;padding-left:28px;border-left:1px solid var(--border);}
 .tl-item{position:relative;padding-bottom:32px;}
 .tl-item:last-child{padding-bottom:0;}
@@ -255,8 +258,8 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
           <div class="step-num">3</div>
           <div class="step-content">
             <span class="step-tag ios">iOS</span>
-            <div class="step-title">Añadir a pantalla de inicio</div>
-            <div class="step-desc">Desliza el menú hacia abajo y selecciona <strong>"Añadir a pantalla de inicio"</strong>. Edita el nombre si quieres (ej: "Hyrox Tracker") y toca <strong>Añadir</strong>.</div>
+            <div class="step-title">Agregar a Inicio</div>
+            <div class="step-desc">Desliza el menú hacia abajo y selecciona <strong>"Agregar a Inicio"</strong>. Edita el nombre si quieres (ej: "Hyrox Tracker") y toca <strong>Agregar</strong>.</div>
           </div>
         </div>
         <div class="step">
@@ -317,12 +320,10 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
     <div class="callout-text">También puedes usar la app directamente en el navegador sin instalarla. La instalación solo añade un atajo a la pantalla de inicio y habilita el modo pantalla completa.</div>
   </div>
 
-  <div class="img-grid">
+  <div class="img-grid" style="max-width:640px;margin-left:auto;margin-right:auto;">
     <div>
-      <div class="img-placeholder">
-        <span class="img-ph-icon">📱</span>
-        <span class="img-ph-name">img/ios-share-btn.png</span>
-        <span class="img-ph-desc">Captura del botón Compartir en Safari (iOS) con la app abierta</span>
+      <div class="img-wrap">
+        <img src="img/ios-share-btn.png" alt="Botón Compartir en Safari iOS resaltado en la barra inferior">
       </div>
       <div class="img-caption">Fig 1 — Botón Compartir en Safari · iOS</div>
     </div>
@@ -333,12 +334,10 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
       <div class="img-caption">Fig 2 — Instalar app · Android Chrome</div>
     </div>
     <div>
-      <div class="img-placeholder">
-        <span class="img-ph-icon">📱</span>
-        <span class="img-ph-name">img/ios-add-home.png</span>
-        <span class="img-ph-desc">Menú de compartir con la opción "Añadir a pantalla de inicio" resaltada</span>
+      <div class="img-wrap">
+        <img src="img/ios-add-home.png" alt="Menú de compartir con la opción Agregar a Inicio resaltada">
       </div>
-      <div class="img-caption">Fig 3 — "Añadir a pantalla de inicio" · iOS</div>
+      <div class="img-caption">Fig 3 — "Agregar a Inicio" · iOS</div>
     </div>
     <div>
       <div class="img-wrap">
@@ -500,42 +499,42 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
     <div class="callout-text">La primera vez que conectas tu cuenta Google verás el mensaje <strong>"Google no ha verificado esta app"</strong>. Esto es normal para aplicaciones independientes. Toca <strong>"Configuración avanzada" → "Ir a Hyrox Tracker"</strong> para continuar. Solo ocurre una vez por cuenta.</div>
   </div>
 
-  <div class="img-grid" style="max-width:640px;margin-left:auto;margin-right:auto;">
+  <div class="img-grid oauth-grid" style="max-width:640px;margin-left:auto;margin-right:auto;">
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap oauth-img">
         <img src="img/oauth-solicitud-correo.png" alt="Pantalla de Google pidiendo el correo electrónico">
       </div>
       <div class="img-caption">Fig 8 — Paso 1 · Ingresar correo de Google</div>
     </div>
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap oauth-img">
         <img src="img/oauth-solicitud-pwd.png" alt="Pantalla de Google pidiendo la contraseña">
       </div>
       <div class="img-caption">Fig 9 — Paso 2 · Ingresar contraseña</div>
     </div>
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap oauth-img">
         <img src="img/oauth-no-verificada.png" alt="Aviso Google no verificó esta app">
       </div>
       <div class="img-caption">Fig 10 — Paso 3 · Aviso "app no verificada" (solo primera vez)</div>
     </div>
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap oauth-img">
         <img src="img/oauth-pantalla-google.png" alt="Pantalla de autorización de permisos">
       </div>
       <div class="img-caption">Fig 11 — Paso 4 · Autorizar permisos de Drive y Sheets</div>
     </div>
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap oauth-img">
         <img src="img/oauth-conectado.png" alt="Cuenta de Google conectada en el header del tracker">
       </div>
-      <div class="img-caption">Fig 14 — Paso 5 · Usuario conectado en la app</div>
+      <div class="img-caption">Fig 12 — Paso 5 · Usuario conectado en la app</div>
     </div>
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap oauth-img">
         <img src="img/sheet-creada-drive.png" alt="Hoja Hyrox Performance Tracker creada en Google Drive">
       </div>
-      <div class="img-caption">Fig 15 — Paso 6 · Hoja creada automáticamente en Drive</div>
+      <div class="img-caption">Fig 13 — Paso 6 · Hoja creada automáticamente en Drive</div>
     </div>
   </div>
 
