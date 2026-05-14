@@ -164,6 +164,27 @@ section:last-child{border-bottom:none;}
 .oauth-img{height:260px;display:flex;align-items:center;justify-content:center;background:var(--surface2);}
 .oauth-img img{max-height:100%;width:auto;max-width:100%;object-fit:contain;}
 @media(max-width:500px){.oauth-img{height:300px;}}
+.install-img{height:300px;display:flex;align-items:center;justify-content:center;background:var(--surface2);}
+.install-img img{max-height:100%;width:auto;max-width:100%;object-fit:contain;}
+@media(max-width:500px){.install-img{height:340px;}}
+.mobile-img{height:480px;display:flex;align-items:flex-start;justify-content:center;background:var(--surface2);overflow:hidden;}
+.mobile-img img{max-height:100%;width:auto;max-width:100%;object-fit:cover;object-position:top;}
+.mobile-overview{display:grid;}
+@media(max-width:500px){.mobile-overview{grid-template-columns:1fr !important;}.mobile-img{height:auto;max-height:520px;}}
+.chart-img{height:200px;display:flex;align-items:center;justify-content:center;background:var(--surface2);}
+.chart-img img{max-height:100%;width:auto;max-width:100%;object-fit:contain;}
+@media(max-width:500px){.chart-img{height:220px;}}
+
+/* LIGHTBOX */
+.img-wrap img{cursor:zoom-in;transition:opacity .15s;}
+.img-wrap img:hover{opacity:0.92;}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.95);backdrop-filter:blur(8px);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;animation:lbFadeIn .2s ease;}
+.lightbox.open{display:flex;}
+.lightbox img{max-width:100%;max-height:100%;object-fit:contain;box-shadow:0 12px 60px rgba(0,0,0,0.6);}
+.lightbox-close{position:absolute;top:20px;right:24px;width:40px;height:40px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:1001;}
+.lightbox-close:hover{border-color:var(--accent);color:var(--accent);}
+.lightbox-caption{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface2);padding:6px 14px;border-radius:2px;border:1px solid var(--border);max-width:90%;text-align:center;}
+@keyframes lbFadeIn{from{opacity:0;}to{opacity:1;}}
 .timeline{position:relative;padding-left:28px;border-left:1px solid var(--border);}
 .tl-item{position:relative;padding-bottom:32px;}
 .tl-item:last-child{padding-bottom:0;}
@@ -322,25 +343,25 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
 
   <div class="img-grid" style="max-width:640px;margin-left:auto;margin-right:auto;">
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap install-img">
         <img src="img/ios-share-btn.png" alt="Botón Compartir en Safari iOS resaltado en la barra inferior">
       </div>
       <div class="img-caption">Fig 1 — Botón Compartir en Safari · iOS</div>
     </div>
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap install-img">
         <img src="img/android-install-banner.png" alt="Banner de instalación de Chrome en Android">
       </div>
       <div class="img-caption">Fig 2 — Instalar app · Android Chrome</div>
     </div>
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap install-img">
         <img src="img/ios-add-home.png" alt="Menú de compartir con la opción Agregar a Inicio resaltada">
       </div>
       <div class="img-caption">Fig 3 — "Agregar a Inicio" · iOS</div>
     </div>
     <div>
-      <div class="img-wrap">
+      <div class="img-wrap install-img">
         <img src="img/home-screen-icon.png" alt="Ícono de Hyrox Tracker instalado en la pantalla de inicio">
       </div>
       <div class="img-caption">Fig 4 — Ícono en pantalla de inicio · Android</div>
@@ -569,12 +590,27 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
   <div class="section-title">Cómo usar la app paso a paso</div>
   <p class="section-desc">Este es el flujo completo desde que abres la app por primera vez hasta que tienes tu histórico de carreras analizado y guardado.</p>
 
-  <div class="img-placeholder tall">
-    <span class="img-ph-icon">🖥️</span>
-    <span class="img-ph-name">img/app-overview.png</span>
-    <span class="img-ph-desc">Vista general de la aplicación con todos los componentes visibles: header, barra de sync, área de carga, objetivo, gráfica radar y panel de inputs</span>
+  <div class="img-grid mobile-overview" style="max-width:760px;margin:24px auto;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+    <div>
+      <div class="img-wrap mobile-img">
+        <img src="img/app-overview-1.png" alt="Panel de inputs por segmento en móvil">
+      </div>
+      <div class="img-caption">Fig 14a — Panel de inputs</div>
+    </div>
+    <div>
+      <div class="img-wrap mobile-img">
+        <img src="img/app-overview-2.png" alt="Header del tracker con sync, target y resumen en móvil">
+      </div>
+      <div class="img-caption">Fig 14b — Header, Sync y Objetivo</div>
+    </div>
+    <div>
+      <div class="img-wrap mobile-img">
+        <img src="img/app-overview-3.png" alt="Resumen, gráfica radar con toggles en móvil">
+      </div>
+      <div class="img-caption">Fig 14c — Resumen y Radar</div>
+    </div>
   </div>
-  <div class="img-caption" style="margin-top:-24px;margin-bottom:32px;">Fig 14 — Vista general del Hyrox Tracker</div>
+  <div class="img-caption" style="text-align:center;margin-top:-12px;margin-bottom:32px;font-style:italic;">Vista general del Hyrox Tracker en móvil — scroll vertical</div>
     <div class="tl-item">
       <div class="tl-dot active"></div>
       <div class="tl-label">Paso 1 — Primera vez</div>
@@ -592,7 +628,7 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
       <div class="tl-label">Paso 3 — Cargar actividad</div>
       <div class="tl-title">Importar desde Garmin o ingresar manualmente</div>
       <div class="tl-desc">
-        <strong>Desde Garmin:</strong> toca "Abrir Garmin" → busca tu carrera Hyrox → Menú ··· → Exportar original → descarga el .zip o .fit → arrástralo al área de carga de la app. El .zip se extrae automáticamente.<br><br>
+        <strong>Desde Garmin:</strong> toca "Abrir Garmin" → busca tu carrera Hyrox → Menú ··· → Exportar archivo → descarga el .zip o .fit → arrástralo al área de carga de la app. El .zip se extrae automáticamente.<br><br>
         <strong>Manualmente:</strong> escribe los tiempos directamente en los campos de cada segmento (Running, Estaciones, Roxzones).
       </div>
     </div>
@@ -661,7 +697,7 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
         <div class="feature-name">Abrir Garmin</div>
       </div>
       <div class="feature-body">
-        El botón verde <strong>"Abrir Garmin"</strong> lleva directamente a tu lista de actividades en Garmin Connect filtrada por running. Desde ahí: toca tu carrera Hyrox → menú <strong>···</strong> → <strong>Exportar original</strong> → descarga el archivo. En móvil, el botón está programado para abrir el navegador en lugar de la app de Garmin.
+        El botón verde <strong>"Abrir Garmin"</strong> lleva directamente a tu lista de actividades en Garmin Connect filtrada por running. Desde ahí: toca tu carrera Hyrox → menú <strong>···</strong> → <strong>Exportar archivo</strong> → descarga el archivo. En móvil, el botón está programado para abrir el navegador en lugar de la app de Garmin.
       </div>
     </div>
 
@@ -685,12 +721,10 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
       <div class="feature-body">
         9 presets desde 🔥 <strong>1h 00m</strong> hasta ✅ <strong>1h 45m</strong>. Al seleccionar un preset, todos los tiempos de referencia se recalculan proporcionalmente: el tiempo de running por km, la roxzone esperada por segmento, y el tiempo de cada estación ponderado por dificultad relativa (Burpee/Sandbag/Wall Balls tienen mayor peso que SkiErg/Sled/Row, y Farmers Carry el menor).<br><br>
         El indicador a la derecha muestra en tiempo real si vas <span class="yes">bajo el objetivo</span> o <span class="no">sobre el objetivo</span> con la diferencia exacta.
-        <div class="img-placeholder short" style="margin-top:16px;">
-          <span class="img-ph-icon">🎯</span>
-          <span class="img-ph-name">img/target-bar.png</span>
-          <span class="img-ph-desc">Barra de objetivo con los 9 presets y el indicador de diferencia vs objetivo</span>
+        <div class="img-wrap" style="max-width:640px;margin:16px auto 0;">
+          <img src="img/target-bar.png" alt="Barra de objetivo con los 9 presets">
         </div>
-        <div class="img-caption">Fig 15 — Barra de tiempo objetivo</div>
+        <div class="img-caption" style="text-align:center;max-width:640px;margin:0 auto;">Fig 15 — Barra de tiempo objetivo</div>
       </div>
     </div>
 
@@ -706,12 +740,10 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
         • <strong style="color:var(--station)">Estaciones</strong> — suma de las 8 estaciones de trabajo (sin roxzone)<br>
         • <strong style="color:var(--roxzone)">Roxzones</strong> — suma de las 7 transiciones<br><br>
         Cada celda muestra el tiempo real en grande y debajo <code>obj XX:XX</code> (el tiempo objetivo para esa categoría según el preset elegido).
-        <div class="img-placeholder short" style="margin-top:16px;">
-          <span class="img-ph-icon">📊</span>
-          <span class="img-ph-name">img/resumen-metricas.png</span>
-          <span class="img-ph-desc">Las 4 celdas de resumen con tiempos reales y objetivos debajo en amarillo</span>
+        <div class="img-wrap" style="max-width:640px;margin:16px auto 0;">
+          <img src="img/resumen-metricas.png" alt="Las 4 celdas de resumen con tiempos reales y objetivos">
         </div>
-        <div class="img-caption">Fig 16 — Celdas de resumen</div>
+        <div class="img-caption" style="text-align:center;max-width:640px;margin:0 auto;">Fig 16 — Celdas de resumen</div>
       </div>
     </div>
 
@@ -724,11 +756,11 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
         <strong>Radar:</strong> muestra simultáneamente los 16 segmentos + la línea de objetivo. Dos toggles adicionales: <em>Mostrar Roxzones</em> (activa/desactiva las 7 roxzones del radar) y <em>Normalizado % objetivo</em> (cambia la escala de segundos absolutos a porcentaje del objetivo — 100% = exacto al objetivo, &lt;100% = más rápido).<br><br>
         <strong>Barras:</strong> comparación segmento a segmento con la línea de objetivo superpuesta. Útil para identificar exactamente qué estación o run tuvo el mayor desvío.<br><br>
         <strong>Distribución:</strong> dona con la proporción del tiempo total entre Running, Estaciones y Roxzones. El tooltip muestra tiempo exacto y porcentaje al pasar el mouse.
-        <div class="img-grid" style="margin-top:16px;">
-          <div><div class="img-placeholder"><span class="img-ph-icon">🕸️</span><span class="img-ph-name">img/grafica-radar.png</span><span class="img-ph-desc">Gráfica radar con datos reales y línea de objetivo amarilla</span></div><div class="img-caption">Fig 17 — Radar</div></div>
-          <div><div class="img-placeholder"><span class="img-ph-icon">📈</span><span class="img-ph-name">img/grafica-barras.png</span><span class="img-ph-desc">Gráfica de barras por segmento con línea de objetivo</span></div><div class="img-caption">Fig 18 — Barras</div></div>
-          <div><div class="img-placeholder"><span class="img-ph-icon">🍩</span><span class="img-ph-name">img/grafica-distribucion.png</span><span class="img-ph-desc">Gráfica tipo dona con distribución de tiempo</span></div><div class="img-caption">Fig 19 — Distribución</div></div>
-          <div><div class="img-placeholder"><span class="img-ph-icon">📡</span><span class="img-ph-name">img/radar-normalizado.png</span><span class="img-ph-desc">Radar en modo normalizado % del objetivo</span></div><div class="img-caption">Fig 20 — Radar normalizado</div></div>
+        <div class="img-grid chart-grid" style="margin-top:16px;max-width:640px;margin-left:auto;margin-right:auto;">
+          <div><div class="img-wrap chart-img"><img src="img/grafica-radar.png" alt="Gráfica radar con datos reales y línea de objetivo"></div><div class="img-caption">Fig 17 — Radar</div></div>
+          <div><div class="img-wrap chart-img"><img src="img/grafica-barras.png" alt="Gráfica de barras por segmento con línea de objetivo"></div><div class="img-caption">Fig 18 — Barras</div></div>
+          <div><div class="img-wrap chart-img"><img src="img/grafica-distribucion.png" alt="Gráfica tipo dona con distribución de tiempo"></div><div class="img-caption">Fig 19 — Distribución</div></div>
+          <div><div class="img-wrap chart-img"><img src="img/radar-normalizado.png" alt="Radar en modo normalizado porcentaje del objetivo"></div><div class="img-caption">Fig 20 — Radar normalizado</div></div>
         </div>
       </div>
     </div>
@@ -742,12 +774,26 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
         Tres secciones: <strong>Running splits</strong> (r1–r8), <strong>Estaciones sin roxzone</strong> (s1–s8), <strong>Roxzones</strong> (rz1–rz7). Cada campo acepta minutos y segundos separados.<br><br>
         Al lado derecho de cada fila: tiempo actual, tiempo objetivo (<code>obj mm:ss</code> en amarillo) y delta (<span class="yes">verde si vas adelante</span>, <span class="no">rojo si vas atrás</span>).<br><br>
         <strong>Nota Roxzone 8:</strong> la octava roxzone no existe — después de Wall Balls (última estación) no hay transición, es el final de la carrera. Por eso solo aparecen rz1–rz7.
-        <div class="img-placeholder tall" style="margin-top:16px;">
-          <span class="img-ph-icon">✍️</span>
-          <span class="img-ph-name">img/panel-inputs.png</span>
-          <span class="img-ph-desc">Panel derecho completo con los 3 secciones de inputs (Running, Estaciones, Roxzones) y los deltas en verde/rojo</span>
+        <div class="img-grid mobile-overview" style="margin-top:16px;max-width:640px;margin-left:auto;margin-right:auto;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+          <div>
+            <div class="img-wrap mobile-img" style="height:340px;">
+              <img src="img/panel-input-1.png" alt="Sección Running Splits con 8 carreras de 1km">
+            </div>
+            <div class="img-caption">Fig 21a — Running Splits (8 runs)</div>
+          </div>
+          <div>
+            <div class="img-wrap mobile-img" style="height:340px;">
+              <img src="img/panel-input-2.png" alt="Sección Estaciones con las 8 estaciones de trabajo">
+            </div>
+            <div class="img-caption">Fig 21b — Estaciones (8 stations)</div>
+          </div>
+          <div>
+            <div class="img-wrap mobile-img" style="height:340px;">
+              <img src="img/panel-input-3.png" alt="Sección Roxzones con las 7 transiciones">
+            </div>
+            <div class="img-caption">Fig 21c — Roxzones (7 zones)</div>
+          </div>
         </div>
-        <div class="img-caption">Fig 21 — Panel de inputs por segmento</div>
       </div>
     </div>
 
@@ -760,12 +806,10 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
         Aparece automáticamente cuando modificas manualmente cualquier campo después de haber cargado una carrera. Dos opciones:<br><br>
         • <strong>Descartar</strong> — restaura los valores originales de la carrera cargada<br>
         • <strong>↑ Actualizar en Sheets</strong> — sobreescribe la fila existente en Google Sheets (no crea una nueva fila)
-        <div class="img-placeholder short" style="margin-top:16px;">
-          <span class="img-ph-icon">🟡</span>
-          <span class="img-ph-name">img/barra-cambios.png</span>
-          <span class="img-ph-desc">Barra amarilla con botones Descartar y ↑ Actualizar en Sheets</span>
+        <div class="img-wrap" style="max-width:760px;margin:16px auto 0;">
+          <img src="img/barra-cambios.png" alt="Barra de cambios sin guardar con botones Descartar y Actualizar en Sheets">
         </div>
-        <div class="img-caption">Fig 22 — Barra de cambios sin guardar</div>
+        <div class="img-caption" style="text-align:center;max-width:760px;margin:0 auto;">Fig 22 — Barra de cambios sin guardar</div>
       </div>
     </div>
 
@@ -782,9 +826,19 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
         • Badge <span class="yes">● Sheets</span> — la carrera está sincronizada<br>
         • Badge <span class="partial" style="color:var(--warn)">● pendiente</span> — la carrera no se ha subido aún<br><br>
         Con 2 o más carreras aparece la <strong>gráfica de evolución</strong>: barras apiladas con Running (azul), Estaciones (verde) y Roxzones (gris) por carrera, con la línea amarilla de objetivo.
-        <div class="img-grid" style="margin-top:16px;">
-          <div><div class="img-placeholder tall"><span class="img-ph-icon">📋</span><span class="img-ph-name">img/historico-lista.png</span><span class="img-ph-desc">Tab Histórico con varias carreras, badges de sync y una tarjeta expandida con splits</span></div><div class="img-caption">Fig 23 — Tab Histórico</div></div>
-          <div><div class="img-placeholder tall"><span class="img-ph-icon">📉</span><span class="img-ph-name">img/grafica-evolucion.png</span><span class="img-ph-desc">Gráfica de evolución de tiempo total por carrera con barras apiladas y línea de objetivo</span></div><div class="img-caption">Fig 24 — Gráfica de evolución</div></div>
+        <div class="img-grid" style="margin-top:16px;max-width:760px;margin-left:auto;margin-right:auto;">
+          <div>
+            <div class="img-wrap" style="background:var(--surface2);">
+              <img src="img/historico-lista.png" alt="Tab Histórico con tarjeta expandida mostrando splits por segmento">
+            </div>
+            <div class="img-caption">Fig 23 — Tab Histórico con detalle expandido</div>
+          </div>
+          <div>
+            <div class="img-wrap" style="background:var(--surface2);">
+              <img src="img/grafica-evolucion.png" alt="Gráfica de evolución de tiempo total por carrera con barras apiladas">
+            </div>
+            <div class="img-caption">Fig 24 — Gráfica de evolución de tiempo</div>
+          </div>
         </div>
       </div>
     </div>
@@ -811,14 +865,14 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
       <div class="step-num">2</div>
       <div class="step-content">
         <div class="step-title">Menú de la actividad</div>
-        <div class="step-desc">Abre la actividad y toca los <strong>tres puntos ···</strong> o el ícono de menú en la esquina superior derecha.</div>
+        <div class="step-desc">Abre la actividad y toca el <strong>ícono de configuración ⚙</strong> (rueda dentada) en la esquina superior derecha de la actividad. En la app móvil aparece como tres puntos <strong>···</strong>.</div>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-content">
-        <div class="step-title">Exportar original</div>
-        <div class="step-desc">Selecciona <strong>"Exportar original"</strong>. Garmin descarga un archivo .zip que contiene el .fit de la actividad.</div>
+        <div class="step-title">Exportar archivo</div>
+        <div class="step-desc">Selecciona <strong>"Exportar archivo"</strong>. Garmin descarga un archivo .zip que contiene el .fit de la actividad.</div>
       </div>
     </div>
     <div class="step">
@@ -835,13 +889,23 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
     <div class="flow-item"><div class="flow-box">Actividades</div><div class="flow-arrow">→</div></div>
     <div class="flow-item"><div class="flow-box">Tu carrera Hyrox</div><div class="flow-arrow">→</div></div>
     <div class="flow-item"><div class="flow-box">··· Menú</div><div class="flow-arrow">→</div></div>
-    <div class="flow-item"><div class="flow-box accent">Exportar original</div><div class="flow-arrow">→</div></div>
+    <div class="flow-item"><div class="flow-box accent">Exportar archivo</div><div class="flow-arrow">→</div></div>
     <div class="flow-item"><div class="flow-box gs">.zip descargado</div></div>
   </div>
 
-  <div class="img-grid">
-    <div><div class="img-placeholder"><span class="img-ph-icon">⌚</span><span class="img-ph-name">img/garmin-actividad.png</span><span class="img-ph-desc">Pantalla de actividad Hyrox en Garmin Connect con el menú ··· abierto</span></div><div class="img-caption">Fig 25 — Menú de actividad en Garmin</div></div>
-    <div><div class="img-placeholder"><span class="img-ph-icon">📦</span><span class="img-ph-name">img/garmin-exportar.png</span><span class="img-ph-desc">Opción "Exportar original" resaltada en el menú de Garmin Connect</span></div><div class="img-caption">Fig 26 — Exportar original</div></div>
+  <div class="img-grid" style="max-width:760px;margin-left:auto;margin-right:auto;">
+    <div>
+      <div class="img-wrap" style="background:var(--surface2);">
+        <img src="img/garmin-actividad.png" alt="Pantalla de actividad en Garmin Connect mostrando el botón de configuración">
+      </div>
+      <div class="img-caption">Fig 25 — Botón de configuración (rueda) en Garmin Connect</div>
+    </div>
+    <div>
+      <div class="img-wrap" style="background:var(--surface2);">
+        <img src="img/garmin-exportar.png" alt="Menú de Garmin con la opción Exportar archivo resaltada">
+      </div>
+      <div class="img-caption">Fig 26 — Opción "Exportar archivo"</div>
+    </div>
   </div>
 
   <div class="callout tip">
@@ -897,6 +961,13 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
   </div>
 </footer>
 
+<!-- LIGHTBOX para ampliar imágenes -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox(event)" aria-label="Cerrar">✕</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
 <script>
 // Highlight active nav link on scroll
 const sections=document.querySelectorAll('section[id]');
@@ -911,6 +982,43 @@ const observer=new IntersectionObserver(entries=>{
   });
 },{threshold:0.3});
 sections.forEach(s=>observer.observe(s));
+
+// LIGHTBOX - ampliar imagen al hacer clic
+const lightbox=document.getElementById('lightbox');
+const lightboxImg=document.getElementById('lightbox-img');
+const lightboxCaption=document.getElementById('lightbox-caption');
+
+function openLightbox(src, caption){
+  lightboxImg.src=src;
+  lightboxCaption.textContent=caption||'';
+  lightbox.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeLightbox(e){
+  // Solo cerrar si el clic es en el fondo, el botón ✕, o la propia imagen del lightbox
+  if(e&&e.target.tagName==='IMG'&&e.target.id!=='lightbox-img'){return;}
+  lightbox.classList.remove('open');
+  document.body.style.overflow='';
+  setTimeout(()=>{lightboxImg.src='';},200);
+}
+
+// Asignar click a todas las imágenes dentro de .img-wrap
+document.querySelectorAll('.img-wrap img').forEach(img=>{
+  img.addEventListener('click',e=>{
+    e.stopPropagation();
+    // Buscar el caption asociado en el .img-caption hermano del .img-wrap
+    const wrapper=img.closest('.img-wrap').parentElement;
+    const captionEl=wrapper.querySelector('.img-caption');
+    const caption=captionEl?captionEl.textContent.trim():'';
+    openLightbox(img.src, caption);
+  });
+});
+
+// Cerrar con ESC
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&lightbox.classList.contains('open'))closeLightbox(e);
+});
 </script>
 </body>
 </html>
