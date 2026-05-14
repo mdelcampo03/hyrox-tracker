@@ -166,7 +166,15 @@ section:last-child{border-bottom:none;}
 @media(max-width:500px){.oauth-img{height:300px;}}
 .install-img{height:300px;display:flex;align-items:center;justify-content:center;background:var(--surface2);}
 .install-img img{max-height:100%;width:auto;max-width:100%;object-fit:contain;}
-@media(max-width:500px){.install-img{height:340px;}}
+@media(max-width:500px){
+  .install-img{height:340px;}
+  /* En móvil agrupar por OS: 2 iOS arriba, 2 Android abajo */
+  .install-grid{display:flex;flex-direction:column;}
+  .install-grid > [data-order="1"]{order:1;}
+  .install-grid > [data-order="2"]{order:2;}
+  .install-grid > [data-order="3"]{order:3;}
+  .install-grid > [data-order="4"]{order:4;}
+}
 .mobile-img{height:480px;display:flex;align-items:flex-start;justify-content:center;background:var(--surface2);overflow:hidden;}
 .mobile-img img{max-height:100%;width:auto;max-width:100%;object-fit:cover;object-position:top;}
 .mobile-overview{display:grid;}
@@ -210,6 +218,8 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
   <a class="nav-link" href="#modos">Modos</a>
   <a class="nav-link" href="#flujo">Flujo</a>
   <a class="nav-link" href="#funciones">Funciones</a>
+  <a class="nav-link" href="#primus">PRIMUS</a>
+  <a class="nav-link" href="#garmin">Garmin</a>
   <a class="nav-link" href="#glosario">Glosario</a>
 </nav>
 
@@ -236,8 +246,9 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
       <li><a href="#modos"><span class="toc-num">02</span> Modos de conexión — Local, Manual y OAuth</a></li>
       <li><a href="#flujo"><span class="toc-num">03</span> Flujo cronológico de uso</a></li>
       <li><a href="#funciones"><span class="toc-num">04</span> Funciones detalladas</a></li>
-      <li><a href="#garmin"><span class="toc-num">05</span> Exportar desde Garmin Connect</a></li>
-      <li><a href="#glosario"><span class="toc-num">06</span> Glosario de términos</a></li>
+      <li><a href="#primus"><span class="toc-num">05</span> Registrar tu sesión en PRIMUS</a></li>
+      <li><a href="#garmin"><span class="toc-num">06</span> Exportar desde Garmin Connect</a></li>
+      <li><a href="#glosario"><span class="toc-num">07</span> Glosario de términos</a></li>
     </ul>
   </div>
 </section>
@@ -341,26 +352,26 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
     <div class="callout-text">También puedes usar la app directamente en el navegador sin instalarla. La instalación solo añade un atajo a la pantalla de inicio y habilita el modo pantalla completa.</div>
   </div>
 
-  <div class="img-grid" style="max-width:640px;margin-left:auto;margin-right:auto;">
-    <div>
+  <div class="img-grid install-grid" style="max-width:640px;margin-left:auto;margin-right:auto;">
+    <div data-order="1">
       <div class="img-wrap install-img">
         <img src="img/ios-share-btn.png" alt="Botón Compartir en Safari iOS resaltado en la barra inferior">
       </div>
       <div class="img-caption">Fig 1 — Botón Compartir en Safari · iOS</div>
     </div>
-    <div>
+    <div data-order="3">
       <div class="img-wrap install-img">
         <img src="img/android-install-banner.png" alt="Banner de instalación de Chrome en Android">
       </div>
-      <div class="img-caption">Fig 2 — Instalar app · Android Chrome</div>
+      <div class="img-caption">Fig 3 — Instalar app · Android Chrome</div>
     </div>
-    <div>
+    <div data-order="2">
       <div class="img-wrap install-img">
         <img src="img/ios-add-home.png" alt="Menú de compartir con la opción Agregar a Inicio resaltada">
       </div>
-      <div class="img-caption">Fig 3 — "Agregar a Inicio" · iOS</div>
+      <div class="img-caption">Fig 2 — "Agregar a Inicio" · iOS</div>
     </div>
-    <div>
+    <div data-order="4">
       <div class="img-wrap install-img">
         <img src="img/home-screen-icon.png" alt="Ícono de Hyrox Tracker instalado en la pantalla de inicio">
       </div>
@@ -846,9 +857,77 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
   </div>
 </section>
 
+<section id="primus">
+  <div class="section-eyebrow">05 — Registrar simulación</div>
+  <div class="section-title">Registrar tu sesión en PRIMUS</div>
+  <p class="section-desc">Antes de exportar, necesitas grabar correctamente la actividad en tu dispositivo Garmin. Sigue estos pasos durante tu simulación en PRIMUS:</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Configuración previa</div>
+        <div class="step-desc">Asegúrate de que tu perfil de actividad <strong>Carrera</strong> tenga configurada la opción <strong>Distancia Automática = 1 km</strong>. Esto permite que el reloj registre automáticamente cada kilómetro como una vuelta.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Iniciar la actividad</div>
+        <div class="step-desc">Inicia una nueva actividad de <strong>Carrera</strong> en tu Garmin al comenzar la simulación.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Las 8 vueltas de running</div>
+        <div class="step-desc">Corre 8 vueltas alrededor del box en la pista de PRIMUS:<br>
+        • En la <strong>vuelta 7</strong> se completa el primer kilómetro (Garmin la registra automáticamente como Run 1)<br>
+        • La <strong>vuelta 8</strong> simula el tiempo de roxzone (transición hacia la estación)</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <div class="step-title">Registrar cada estación</div>
+        <div class="step-desc">Entra a la estación de <strong>SkiErg</strong>. Una vez que estés en la zona de <strong>In/Out</strong>, presiona el botón inferior derecho <strong>"Back/Lap"</strong> — esto delimita el tiempo de la estación y comienza el siguiente segmento.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <div class="step-title">Repetir en las 7 estaciones restantes</div>
+        <div class="step-desc">Sigue el mismo procedimiento en cada estación: <strong>Sled Push → Sled Pull → Burpee Broad Jumps → Rowing → Farmers Carry → Sandbag Lunges → Wall Balls</strong>. Al completar los Wall Balls y subir la rampa final, presiona el botón superior derecho <strong>"Start/Stop"</strong> para finalizar la actividad.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-content">
+        <div class="step-title">Resultado esperado</div>
+        <div class="step-desc">Al finalizar tendrás:<br>
+        • <strong>16 vueltas/series</strong> registradas en la actividad (8 runs + 8 estaciones)<br>
+        • <strong>Distancia total</strong> ligeramente superior a 10 km</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-content">
+        <div class="step-title">Cálculo automático de roxzones</div>
+        <div class="step-desc">El tiempo de cada roxzone se calcula automáticamente al cargar el archivo en el tracker, dividiendo el tiempo de cada kilómetro corrido entre 7:<br>
+        <code style="display:inline-block;margin-top:8px;background:var(--surface3);padding:6px 12px;border-radius:2px;color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;">roxzone = tiempo_run ÷ 7</code></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-top:20px;">
+    <div class="callout-label">📌 Otros relojes inteligentes</div>
+    <div class="callout-text">Si tienes un reloj inteligente de otra marca (<strong>Apple Watch, Polar, Suunto, COROS</strong>, etc.) puedes usar aplicaciones como <strong>Strava</strong> para grabar tu actividad y luego exportar el archivo <code>.fit</code> desde su plataforma web. La mayoría de relojes inteligentes con GPS son compatibles con Strava y permiten exportar la actividad en formato <code>.fit</code> o <code>.gpx</code>, los cuales el Hyrox Tracker también acepta.</div>
+  </div>
+</section>
+
 <!-- GARMIN EXPORT -->
 <section id="garmin">
-  <div class="section-eyebrow">05 — Garmin</div>
+  <div class="section-eyebrow">06 — Garmin</div>
   <div class="section-title">Exportar desde Garmin Connect</div>
   <p class="section-desc">Pasos para obtener el archivo de tu carrera Hyrox desde la app y web de Garmin Connect.</p>
 
@@ -916,7 +995,7 @@ footer{padding:48px 0;border-top:1px solid var(--border);}
 
 <!-- GLOSARIO -->
 <section id="glosario">
-  <div class="section-eyebrow">06 — Glosario</div>
+  <div class="section-eyebrow">07 — Glosario</div>
   <div class="section-title">Términos clave</div>
   <p class="section-desc">Referencia rápida de los conceptos que usa la aplicación.</p>
 
