@@ -1027,7 +1027,17 @@ async function mergeSheetData(sheetRows){
     const total=parseInt(row[3])||0;
     if(!name||total<=0)continue;
 
-    const exists=local.find(r=>r.name===name&&Math.abs(r.total-total)<2);
+    // Detectar duplicados: nombre exacto + tiempo total exacto + misma fecha (mismo día)
+    const exists=local.find(r=>{
+      if(r.name!==name)return false;
+      if(r.total!==total)return false;
+      // Comparar misma fecha (día), no exacto al milisegundo
+      try{
+        const d1=new Date(r.date);
+        const d2=new Date(row[0]);
+        return d1.toDateString()===d2.toDateString();
+      }catch(e){return false;}
+    });
     if(exists){
       if(!exists.synced)exists.synced=true;
       if(!exists.sheetRow)exists.sheetRow=rowIdx+2;
@@ -1885,13 +1895,21 @@ async function pullFromSheets(){
   showToast('Leyendo Google Sheets…');
   try{
     const url=APPS_SCRIPT_URL+'?sheetId='+encodeURIComponent(sid);
-    const r=await fetch(url,{method:'GET',redirect:'follow'});
+    // Timeout de 15 segundos para no bloquear indefinidamente
+    const controller=new AbortController();
+    const timeoutId=setTimeout(()=>controller.abort(),15000);
+    const r=await fetch(url,{method:'GET',redirect:'follow',signal:controller.signal});
+    clearTimeout(timeoutId);
     if(!r.ok)throw new Error('HTTP '+r.status);
     const data=await r.json();
     if(!data.ok||!Array.isArray(data.rows))throw new Error(data.error||'Respuesta inválida');
-    await mergeSheetData(data.rows);
+    const added=await mergeSheetData(data.rows);
     if(document.getElementById('tab-history').classList.contains('active'))renderHistory();
-  }catch(e){showToast('No se pudo conectar: '+e.message,true);}
+    showToast(`✓ ${data.rows.length} carrera${data.rows.length!==1?'s':''} leídas`);
+  }catch(e){
+    if(e.name==='AbortError')showToast('Tiempo de espera agotado — Apps Script muy lento',true);
+    else showToast('No se pudo conectar: '+e.message,true);
+  }
 }
 
 async function pullFromSheetsOAuth(){
@@ -1899,16 +1917,22 @@ async function pullFromSheetsOAuth(){
   if(!sid||!oauthToken){showToast('Reconecta tu cuenta de Google',true);return;}
   showToast('Leyendo tu Google Sheet…');
   try{
+    const controller=new AbortController();
+    const timeoutId=setTimeout(()=>controller.abort(),15000);
     const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Hyrox!A2:AJ500`,{
-      headers:{Authorization:'Bearer '+oauthToken}
+      headers:{Authorization:'Bearer '+oauthToken},
+      signal:controller.signal,
     });
+    clearTimeout(timeoutId);
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
     const rows=d.values||[];
     await mergeSheetData(rows);
     if(document.getElementById('tab-history').classList.contains('active'))renderHistory();
+    showToast(`✓ ${rows.length} carrera${rows.length!==1?'s':''} leídas`);
   }catch(e){
-    if(e.message.includes('401'))showToast('Sesión expirada — reconecta Google',true);
+    if(e.name==='AbortError')showToast('Tiempo de espera agotado',true);
+    else if(e.message.includes('401'))showToast('Sesión expirada — reconecta Google',true);
     else showToast('Error al leer Sheets: '+e.message,true);
   }
 }
@@ -2044,8 +2068,11 @@ window.addEventListener('load',()=>{
       initGoogleOAuth();
       // Si tiene token OAuth guardado, restaurar sesión
       if(oauthToken&&getAuthMethod()==='oauth'){
+        // Actualizar UI con datos en cache primero (rápido)
         fetchGoogleUserInfo().then(()=>{
-          updateGoogleBtn();updateSyncBar();pullFromSheets();
+          updateGoogleBtn();updateSyncBar();
+          // Pull en background — no bloquea la UI
+          setTimeout(()=>pullFromSheets(),100);
         });
         return;
       }
@@ -2053,7 +2080,9 @@ window.addEventListener('load',()=>{
     // Sin OAuth: checar método manual o mostrar bienvenida
     const method=getAuthMethod();
     if((method==='manual'||method==='')&&getUserSheetId()){
-      setAuthMethod('manual');pullFromSheets();
+      setAuthMethod('manual');
+      // Pull en background, no bloquea
+      setTimeout(()=>pullFromSheets(),100);
     }else if(!method||(!getUserSheetId()&&!oauthToken)){
       setTimeout(()=>openWelcome(),600);
     }
