@@ -1261,38 +1261,41 @@ function applySplitConversion(){
   const stationIds=['s1','s2','s3','s4','s5','s6','s7','s8'];
   const runIds=['r1','r2','r3','r4','r5','r6','r7','r8'];
   const rzIds=['rz1','rz2','rz3','rz4','rz5','rz6','rz7'];
+
+  // Helper que asigna valor y dispara evento input para que se actualicen cálculos y se marque unsaved
+  function setField(id,val){
+    const el=document.getElementById(id);
+    if(el){
+      el.value=val;
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+    }
+  }
+
   // Cargar runs
   runs.forEach((sec,i)=>{
-    const m=Math.floor(sec/60),s=sec%60;
-    const elM=document.getElementById(runIds[i]+'_m');
-    const elS=document.getElementById(runIds[i]+'_s');
-    if(elM)elM.value=m;
-    if(elS)elS.value=s;
+    setField(runIds[i]+'_m',Math.floor(sec/60));
+    setField(runIds[i]+'_s',sec%60);
   });
   // Cargar estaciones
   stations.forEach((sec,i)=>{
-    const m=Math.floor(sec/60),s=sec%60;
-    const elM=document.getElementById(stationIds[i]+'_m');
-    const elS=document.getElementById(stationIds[i]+'_s');
-    if(elM)elM.value=m;
-    if(elS)elS.value=s;
+    setField(stationIds[i]+'_m',Math.floor(sec/60));
+    setField(stationIds[i]+'_s',sec%60);
   });
   // Cargar roxzones
   roxzones.forEach((sec,i)=>{
-    const m=Math.floor(sec/60),s=sec%60;
-    const elM=document.getElementById(rzIds[i]+'_m');
-    const elS=document.getElementById(rzIds[i]+'_s');
-    if(elM)elM.value=m;
-    if(elS)elS.value=s;
+    setField(rzIds[i]+'_m',Math.floor(sec/60));
+    setField(rzIds[i]+'_s',sec%60);
   });
-  // Actualizar cálculos y nombre del archivo activo
+
   closeSplitConverter();
   setActivityLabel('Splits pegados manualmente');
   onUpdate();
-  // Si hay carrera cargada, marcar cambios sin guardar
-  if(typeof loadedRaceId!=='undefined'&&loadedRaceId){
-    markUnsaved();
-  }
+
+  // Mostrar barra de cambios sin guardar
+  // - Si hay una carrera previa cargada del histórico → Actualizar en Sheets (sobreescribe la fila)
+  // - Si NO hay carrera previa → activa la barra igualmente para que el usuario pueda guardar como nueva
+  markUnsaved();
+
   showToast('✓ Valores cargados en los campos');
 }
 
