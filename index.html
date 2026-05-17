@@ -1468,6 +1468,7 @@ async function renderHistory(){
         <span class="race-total">${secToHmmss(race.total)}</span>
         <div class="race-actions">
           <button class="race-btn" onclick="event.stopPropagation();loadRace(${race.id})">Cargar</button>
+          <button class="race-btn" onclick="event.stopPropagation();copyRaceJson(${race.id})" title="Copiar JSON para abrir en Viewer">📋 JSON</button>
           <button class="race-btn del" onclick="event.stopPropagation();deleteRace(${race.id})">✕</button>
         </div>
       </div>
@@ -1493,6 +1494,33 @@ function toggleCard(id){
   document.getElementById('detail-'+id)?.classList.toggle('open',!!openCards[id]);
   document.getElementById('card-'+id)?.classList.toggle('selected',!!openCards[id]);
 }
+// Copiar JSON de una carrera al portapapeles para pegar en el Viewer
+async function copyRaceJson(id){
+  const history=await loadHistory();
+  const race=history.find(r=>r.id===id);
+  if(!race){showToast('Carrera no encontrada',true);return;}
+  const data={
+    nombre:race.name||'Sin nombre',
+    fecha:new Date(race.date).toISOString().slice(0,10),
+    objetivo:race.preset||75,
+    runs:race.runs||[],
+    estaciones:race.stations||[],
+    roxzones:race.roxzones||[]
+  };
+  const json=JSON.stringify(data,null,2);
+  try{
+    await navigator.clipboard.writeText(json);
+    showToast('✓ JSON copiado — pégalo en el Viewer');
+  }catch(e){
+    // Fallback para navegadores sin clipboard API
+    const ta=document.createElement('textarea');
+    ta.value=json;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');showToast('✓ JSON copiado');}
+    catch(e2){showToast('No se pudo copiar — abre la consola',true);console.log(json);}
+    document.body.removeChild(ta);
+  }
+}
+
 async function loadRace(id){
   const history=await loadHistory();
   const race=history.find(r=>r.id===id);if(!race)return;
