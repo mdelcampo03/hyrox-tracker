@@ -86,8 +86,8 @@
   @media(max-width:720px){.garmin-strip{grid-template-columns:1fr;}.gs-arrow{display:none;}.gs-step:not(:first-of-type){display:none;}}
 
   /* ── IMPORT ── */
-  .import-zone{margin:0;position:relative;}
-  .drop-area{border:0;border-bottom:2px dashed var(--border);padding:20px 32px;display:flex;align-items:center;gap:16px;background:transparent;cursor:pointer;transition:all .2s;}
+  .import-zone{margin:0;}
+  .drop-area{border:0;border-bottom:2px dashed var(--border);padding:20px 32px;display:flex;align-items:center;gap:16px;background:transparent;cursor:pointer;transition:all .2s;position:relative;}
   .drop-area:hover,.drop-area.drag-over{border-color:var(--accent);background:rgba(255,69,0,0.03);}
   .drop-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
   .drop-icon{font-family:'Archivo Black',sans-serif;font-size:1.6rem;color:var(--accent);flex-shrink:0;}
@@ -112,7 +112,17 @@
   /* ── TARGET BAR ── */
   .target-bar{padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .target-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap;}
-  .preset-row{display:flex;gap:4px;flex-wrap:wrap;}
+  .preset-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
+  .custom-target-wrap{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--border);border-radius:2px;padding:2px;background:transparent;height:28px;position:relative;}
+  .custom-target-wrap:hover{border-color:var(--accent);}
+  .custom-target-wrap.active{border-color:var(--accent);background:rgba(232,255,0,0.06);}
+  .custom-target-wrap[data-cat]:hover::after{content:attr(data-cat);position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:var(--surface3);color:var(--accent);font-size:9px;padding:2px 7px;border-radius:2px;white-space:nowrap;border:1px solid var(--border);pointer-events:none;z-index:10;}
+  .custom-target-icon{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint);padding:0 4px;}
+  .custom-target-wrap input{width:42px;background:transparent;border:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;text-align:center;outline:none;padding:2px;-moz-appearance:textfield;}
+  .custom-target-wrap input::-webkit-outer-spin-button,.custom-target-wrap input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .custom-target-wrap input:focus{color:var(--accent);}
+  .custom-target-apply{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 8px;border-radius:2px;border:none;background:var(--accent);color:#000;cursor:pointer;height:22px;transition:opacity .15s;}
+  .custom-target-apply:hover{opacity:0.85;}
   .preset-btn{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;letter-spacing:0.06em;padding:6px 10px;border-radius:2px;border:1px solid var(--border);background:transparent;color:var(--faint);cursor:pointer;transition:all .15s;position:relative;white-space:nowrap;}
   .preset-btn:hover{border-color:var(--accent);color:var(--text);background:rgba(255,69,0,0.06);}
   .preset-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700;}
@@ -375,6 +385,10 @@
     </div>
     <div class="import-status" id="importStatus">Sin archivo</div>
   </div>
+  <div style="padding:10px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);position:relative;z-index:5;">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);">o pega los splits de Garmin</span>
+    <button type="button" class="btn" style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:6px 14px;border-radius:2px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;position:relative;z-index:5;" onclick="event.stopPropagation();openSplitConverter();return false;">📋 Pegar tabla de splits</button>
+  </div>
 </div>
 <div class="parse-log" id="parseLog"></div>
 
@@ -399,6 +413,11 @@
     <button class="preset-btn" id="preset-90" onclick="setPreset(90)" data-cat="Principiante+">💪 1h 30m</button>
     <button class="preset-btn" id="preset-95" onclick="setPreset(95)" data-cat="Principiante">💪 1h 35m</button>
     <button class="preset-btn" id="preset-105" onclick="setPreset(105)" data-cat="Completar">✅ 1h 45m</button>
+    <div class="custom-target-wrap" data-cat="55 a 120 min">
+      <span class="custom-target-icon">⚙</span>
+      <input type="number" id="custom-target-input" min="55" max="120" step="1" placeholder="min" title="Objetivo personalizado entre 55 y 120 minutos">
+      <button class="custom-target-apply" onclick="applyCustomTarget()">→</button>
+    </div>
   </div>
   <span class="target-label">→ <span class="target-display" id="tgt-display">1:15:00</span></span>
   <div class="target-gap neutral" id="tgt-gap">— sin datos</div>
@@ -518,6 +537,26 @@
         <svg style="width:11px;height:11px;display:inline;margin-right:4px;vertical-align:middle;" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
         Guardar + Sync a Sheets
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SPLIT CONVERTER — pegar tabla de Garmin y convertir directamente a inputs -->
+<div class="modal-overlay" id="splitConverterModal">
+  <div class="modal" style="max-width:640px;">
+    <h3>📋 Pegar tabla de splits</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Pega la tabla completa de splits exportada desde Garmin Connect (30 renglones, con o sin header). Los valores se cargarán automáticamente en los campos del tracker.</p>
+    <textarea id="splitConvInput" placeholder="Split	Time of Day	Time	Dif
+Roxzone In	11:54:45	4:36	4:36
+SkiErg In	11:55:26	5:17	0:41
+SkiErg Out	12:00:32	10:23	5:06
+..." style="width:100%;min-height:240px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.5;padding:12px;resize:vertical;outline:none;margin-bottom:14px;"></textarea>
+    <div id="splitConvPreview" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:14px;max-height:280px;overflow-y:auto;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+      <button class="btn ghost" onclick="closeSplitConverter()">Cancelar</button>
+      <button class="btn ghost" onclick="loadSplitExample()">Cargar ejemplo</button>
+      <button class="btn" id="splitConvPreviewBtn" onclick="previewSplitConversion()">👁 Vista previa</button>
+      <button class="btn primary" id="splitConvApplyBtn" onclick="applySplitConversion()" style="display:none;">→ Cargar en inputs</button>
     </div>
   </div>
 </div>
@@ -1094,12 +1133,217 @@ function setPreset(min){
   currentPreset=min;
   document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('preset-'+min)?.classList.add('active');
+  // Si no es preset predefinido, marcar el wrap personalizado como activo
+  const customWrap=document.querySelector('.custom-target-wrap');
+  const predefined=[60,65,70,75,80,85,90,95,105];
+  if(customWrap){
+    if(!predefined.includes(min))customWrap.classList.add('active');
+    else customWrap.classList.remove('active');
+  }
   document.getElementById('tgt-display').textContent=secToHmmss(min*60);
   onUpdate();
   // Si el tab Histórico está activo, re-renderizar para que la línea de objetivo y los deltas se actualicen
   const histTab=document.getElementById('tab-history');
   if(histTab&&histTab.classList.contains('active'))renderHistory();
 }
+
+// Calcular y aplicar objetivo personalizado (55-120 min)
+// Usa la misma lógica proporcional que los presets predefinidos:
+//   run/km = total_sec × 0.453 ÷ 8
+//   roxzone = run ÷ 7
+//   estaciones distribuidas con pesos: SkiErg/SledPush/SledPull/Row=1.0, Burpee/Sandbag/Walls=1.153, Farmers=0.729
+// ── SPLIT CONVERTER (pegar tabla de Garmin → cargar en inputs) ─────────────
+let convertedSplits=null;
+
+function openSplitConverter(){
+  const m=document.getElementById('splitConverterModal');
+  m.classList.add('open');
+  document.getElementById('splitConvInput').value='';
+  document.getElementById('splitConvPreview').style.display='none';
+  document.getElementById('splitConvApplyBtn').style.display='none';
+  document.getElementById('splitConvPreviewBtn').style.display='';
+  convertedSplits=null;
+}
+
+function closeSplitConverter(){
+  document.getElementById('splitConverterModal').classList.remove('open');
+}
+
+function loadSplitExample(){
+  document.getElementById('splitConvInput').value=`Split	Time of Day	Time	Dif
+Roxzone In	11:54:45	4:36	4:36
+SkiErg In	11:55:26	5:17	0:41
+SkiErg Out	12:00:32	10:23	5:06
+Roxzone Out	12:00:59	10:49	0:26
+Roxzone In	12:06:54	16:44	5:55
+Sled Push In	12:07:26	17:17	0:33
+Sled Push Out	12:12:22	22:13	4:56
+Roxzone Out	12:12:44	22:35	0:22
+Roxzone In	12:18:29	28:20:00	5:45
+Sled Pull In	12:18:51	28:41:00	0:21
+Sled Pull Out	12:24:42	34:33:00	5:52
+Roxzone Out	12:25:04	34:55:00	0:22
+Roxzone In	12:30:27	40:18:00	5:23
+Burpee Broad Jump In	12:30:43	40:34:00	0:16
+Burpee Broad Jump Out	12:34:22	44:13:00	3:39
+Roxzone Out	12:34:55	44:45:00	0:32
+Roxzone In	12:40:24	50:15:00	5:30
+Row In	12:40:34	50:25:00	0:10
+Row Out	12:45:41	55:31:00	5:06
+Roxzone Out	12:46:04	55:54:00	0:23
+Roxzone In	12:51:14	1:01:05	5:11
+Farmers Carry In	12:51:37	1:01:28	0:23
+Farmers Carry Out	12:55:31	1:05:22	3:54
+Roxzone Out	12:56:09	1:06:00	0:38
+Roxzone In	13:01:33	1:11:24	5:24
+Sandbag Lunges In	13:01:55	1:11:45	0:21
+Sandbag Lunges Out	13:08:41	1:18:32	6:47
+Roxzone Out	13:09:39	1:19:30	0:58
+Wall Balls In	13:15:45	1:25:36	6:06
+Total time	13:23:38	1:33:29	7:53`;
+}
+
+// Convertir tiempo a segundos, manejando el bug de Excel que muestra m:ss como h:mm:00
+function splitTimeToSec(t){
+  if(!t)return 0;
+  t=t.trim();
+  const parts=t.split(':').map(p=>parseInt(p)||0);
+  if(parts.length===3){
+    // h:mm:00 → en realidad es mm:ss mal formateado (Excel bug)
+    if(parts[2]===0&&parts[0]<60)return parts[0]*60+parts[1];
+    return parts[0]*3600+parts[1]*60+parts[2];
+  }
+  if(parts.length===2)return parts[0]*60+parts[1];
+  return parts[0]||0;
+}
+
+function previewSplitConversion(){
+  const text=document.getElementById('splitConvInput').value;
+  if(!text.trim()){showToast('Pega primero la tabla de splits',true);return;}
+  // Parsear filas
+  let rows=text.trim().split('\n').filter(l=>l.trim())
+    .map(line=>line.split(/\t+|\s{2,}/).map(c=>c.trim()).filter(Boolean))
+    .filter(cells=>cells.length>=4);
+  // Detectar header
+  if(rows.length>0&&!/^\d/.test(rows[0][1]||''))rows=rows.slice(1);
+  if(rows.length<30){
+    showToast(`Se esperaban 30 renglones de datos, encontrados ${rows.length}`,true);
+    return;
+  }
+  const diff=rows.slice(0,30).map(r=>splitTimeToSec(r[3]));
+  // Mapeo: r1=Run1; r2+r4=Rox1; r3=SkiErg ... etc
+  const runs=[diff[0],diff[4],diff[8],diff[12],diff[16],diff[20],diff[24],diff[28]];
+  const stations=[diff[2],diff[6],diff[10],diff[14],diff[18],diff[22],diff[26],diff[29]];
+  const roxzones=[diff[1]+diff[3],diff[5]+diff[7],diff[9]+diff[11],diff[13]+diff[15],diff[17]+diff[19],diff[21]+diff[23],diff[25]+diff[27]];
+
+  convertedSplits={runs,stations,roxzones};
+
+  // Render preview
+  const stationNames=['SkiErg','Sled Push','Sled Pull','Burpee BJ','Rowing','Farmers Carry','Sandbag Lunges','Wall Balls'];
+  let html='<div style="font-family:\'JetBrains Mono\',monospace;font-size:10px;color:var(--muted);">';
+  html+='<div style="color:var(--run);font-weight:700;letter-spacing:0.08em;margin-bottom:6px;text-transform:uppercase;">Running</div>';
+  for(let i=0;i<8;i++)html+=`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>Run ${i+1}</span><span style="color:var(--accent);font-weight:700;">${secToMmss(runs[i])}</span></div>`;
+  html+='<div style="color:var(--station);font-weight:700;letter-spacing:0.08em;margin:10px 0 6px;text-transform:uppercase;">Estaciones</div>';
+  for(let i=0;i<8;i++)html+=`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>${stationNames[i]}</span><span style="color:var(--accent);font-weight:700;">${secToMmss(stations[i])}</span></div>`;
+  html+='<div style="color:var(--roxzone);font-weight:700;letter-spacing:0.08em;margin:10px 0 6px;text-transform:uppercase;">Roxzones</div>';
+  for(let i=0;i<7;i++)html+=`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>Roxzone ${i+1}</span><span style="color:var(--accent);font-weight:700;">${secToMmss(roxzones[i])}</span></div>`;
+  html+='</div>';
+
+  document.getElementById('splitConvPreview').innerHTML=html;
+  document.getElementById('splitConvPreview').style.display='block';
+  document.getElementById('splitConvApplyBtn').style.display='';
+  document.getElementById('splitConvPreviewBtn').style.display='none';
+}
+
+function applySplitConversion(){
+  if(!convertedSplits){showToast('Genera primero la vista previa',true);return;}
+  const {runs,stations,roxzones}=convertedSplits;
+  const stationIds=['s1','s2','s3','s4','s5','s6','s7','s8'];
+  const runIds=['r1','r2','r3','r4','r5','r6','r7','r8'];
+  const rzIds=['rz1','rz2','rz3','rz4','rz5','rz6','rz7'];
+  // Cargar runs
+  runs.forEach((sec,i)=>{
+    const m=Math.floor(sec/60),s=sec%60;
+    const elM=document.getElementById(runIds[i]+'_m');
+    const elS=document.getElementById(runIds[i]+'_s');
+    if(elM)elM.value=m;
+    if(elS)elS.value=s;
+  });
+  // Cargar estaciones
+  stations.forEach((sec,i)=>{
+    const m=Math.floor(sec/60),s=sec%60;
+    const elM=document.getElementById(stationIds[i]+'_m');
+    const elS=document.getElementById(stationIds[i]+'_s');
+    if(elM)elM.value=m;
+    if(elS)elS.value=s;
+  });
+  // Cargar roxzones
+  roxzones.forEach((sec,i)=>{
+    const m=Math.floor(sec/60),s=sec%60;
+    const elM=document.getElementById(rzIds[i]+'_m');
+    const elS=document.getElementById(rzIds[i]+'_s');
+    if(elM)elM.value=m;
+    if(elS)elS.value=s;
+  });
+  // Actualizar cálculos y nombre del archivo activo
+  closeSplitConverter();
+  setActivityLabel('Splits pegados manualmente');
+  onUpdate();
+  // Si hay carrera cargada, marcar cambios sin guardar
+  if(typeof loadedRaceId!=='undefined'&&loadedRaceId){
+    markUnsaved();
+  }
+  showToast('✓ Valores cargados en los campos');
+}
+
+function setActivityLabel_noop(){}
+
+// Cerrar modal de split converter al hacer clic fuera
+document.addEventListener('click',e=>{
+  const modal=document.getElementById('splitConverterModal');
+  if(e.target===modal)closeSplitConverter();
+});
+
+function applyCustomTarget(){
+  const input=document.getElementById('custom-target-input');
+  const val=parseInt(input.value);
+  if(isNaN(val)||val<55||val>120){
+    showToast('El objetivo debe estar entre 55 y 120 minutos',true);
+    input.focus();
+    return;
+  }
+  const totalSec=val*60;
+  // Calcular split de running por km
+  const runPerKm=Math.round(totalSec*0.453/8);
+  // Roxzone = run/7
+  const roxzone=Math.round(runPerKm/7);
+  // Tiempo total asignado a runs y roxzones
+  const runsTotal=runPerKm*8;
+  const roxzonesTotal=roxzone*7;
+  // Tiempo restante para las 8 estaciones
+  const stationsTotal=totalSec-runsTotal-roxzonesTotal;
+  // Pesos relativos para distribuir entre estaciones
+  // Orden: SkiErg, SledPush, SledPull, BurpeeBJ, Rowing, FarmersCarry, SandbagLunges, WallBalls
+  const weights=[1.0,1.0,1.0,1.153,1.0,0.729,1.153,1.153];
+  const weightSum=weights.reduce((a,b)=>a+b,0);
+  const stations=weights.map(w=>Math.round(stationsTotal*w/weightSum));
+  const runs=Array(8).fill(runPerKm);
+  const roxzones=Array(7).fill(roxzone);
+  // Guardar en PRESET_TARGETS dinámicamente para que setPreset y otras funciones lo encuentren
+  PRESET_TARGETS[val]={runs,stations,roxzones};
+  setPreset(val);
+  showToast(`✓ Objetivo personalizado: ${val} min`);
+}
+
+// Permitir Enter en el input para aplicar
+document.addEventListener('DOMContentLoaded',()=>{
+  const customInput=document.getElementById('custom-target-input');
+  if(customInput){
+    customInput.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();applyCustomTarget();}
+    });
+  }
+});
 
 // ── TABS ──────────────────────────────────────────────────
 function switchTab(tab,btn){
