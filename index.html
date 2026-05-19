@@ -1257,6 +1257,22 @@ function previewSplitConversion(){
 
 function applySplitConversion(){
   if(!convertedSplits){showToast('Genera primero la vista previa',true);return;}
+
+  // Si ya hay una carrera del histórico cargada, preguntar si quiere actualizarla o crear nueva
+  if(typeof loadedRaceId!=='undefined'&&loadedRaceId){
+    const opcion=confirm(
+      '⚠ Ya hay una carrera cargada del histórico.\n\n'+
+      '¿Qué deseas hacer con los nuevos splits?\n\n'+
+      '• Aceptar  → ACTUALIZAR la carrera existente\n'+
+      '• Cancelar → CREAR una NUEVA carrera (descarta la actual)'
+    );
+    if(!opcion){
+      // Usuario eligió crear nueva → limpiar referencia a la carrera del histórico
+      loadedRaceId=null;
+    }
+    // Si aceptó, loadedRaceId se mantiene → al guardar sobreescribirá la fila existente
+  }
+
   const {runs,stations,roxzones}=convertedSplits;
   const stationIds=['s1','s2','s3','s4','s5','s6','s7','s8'];
   const runIds=['r1','r2','r3','r4','r5','r6','r7','r8'];
@@ -1292,8 +1308,6 @@ function applySplitConversion(){
   onUpdate();
 
   // Mostrar barra de cambios sin guardar
-  // - Si hay una carrera previa cargada del histórico → Actualizar en Sheets (sobreescribe la fila)
-  // - Si NO hay carrera previa → activa la barra igualmente para que el usuario pueda guardar como nueva
   markUnsaved();
 
   showToast('✓ Valores cargados en los campos');
@@ -1424,6 +1438,9 @@ async function confirmSave(syncNow){
       if(result&&result.sheetRow)history[0].sheetRow=result.sheetRow;
       await saveHistory(history);
       await updateSyncBar();
+      // Limpiar la barra de cambios sin guardar y vincular la carrera para futuras actualizaciones
+      clearUnsaved();
+      loadedRaceId=race.id;
       showToast('✓ Guardado y sincronizado en Google Sheets');
     }else if(IS_LOCAL){
       showToast('✗ Error al sincronizar — revisa la consola',true);
@@ -1432,6 +1449,9 @@ async function confirmSave(syncNow){
       setTimeout(()=>showSyncLinks([race]),300);
     }
   }else{
+    // Guardado local — también vincular y limpiar barra
+    clearUnsaved();
+    loadedRaceId=race.id;
     showToast('✓ Guardado localmente');
   }
 }
@@ -1494,7 +1514,8 @@ function toggleCard(id){
   document.getElementById('detail-'+id)?.classList.toggle('open',!!openCards[id]);
   document.getElementById('card-'+id)?.classList.toggle('selected',!!openCards[id]);
 }
-// Copiar JSON de una carrera al portapapeles para pegar en el Viewer
+// Copiar JSON de una carrera al portapapeles y descargar como archivo .txt
+// para abrir en el Viewer (hyrox_viewer.html)
 async function copyRaceJson(id){
   const history=await loadHistory();
   const race=history.find(r=>r.id===id);
@@ -1508,16 +1529,32 @@ async function copyRaceJson(id){
     roxzones:race.roxzones||[]
   };
   const json=JSON.stringify(data,null,2);
+  // 1. Copiar al portapapeles
+  let copied=false;
   try{
     await navigator.clipboard.writeText(json);
-    showToast('✓ JSON copiado — pégalo en el Viewer');
+    copied=true;
   }catch(e){
-    // Fallback para navegadores sin clipboard API
     const ta=document.createElement('textarea');
     ta.value=json;document.body.appendChild(ta);ta.select();
-    try{document.execCommand('copy');showToast('✓ JSON copiado');}
-    catch(e2){showToast('No se pudo copiar — abre la consola',true);console.log(json);}
+    try{document.execCommand('copy');copied=true;}catch(e2){}
     document.body.removeChild(ta);
+  }
+  // 2. Descargar como archivo .txt
+  try{
+    const safeName=(race.name||'carrera').replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40);
+    const filename=`hyrox_${safeName}_${new Date(race.date).toISOString().slice(0,10)}.txt`;
+    const blob=new Blob([json],{type:'text/plain'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
+    showToast(copied?'✓ JSON copiado y descargado como .txt':'✓ JSON descargado como .txt');
+  }catch(e){
+    if(copied)showToast('✓ JSON copiado al portapapeles');
+    else showToast('No se pudo copiar/descargar — abre la consola',true);
+    console.log(json);
   }
 }
 
