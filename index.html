@@ -2374,29 +2374,32 @@ function toggleRadar(which,btn){
 }
 
 // ── ZOOM DEL RADAR (CSS transform sobre el canvas - como hacer zoom a una imagen) ─────
-let radarZoomScale=1;// 1 = tamaño normal; >1 = zoom in (más grande); <1 = zoom out
+window.radarZoomScale=1;// 1 = tamaño normal; >1 = zoom in (más grande); <1 = zoom out
 const RADAR_ZOOM_MIN=0.5;
 const RADAR_ZOOM_MAX=3;
 const RADAR_ZOOM_STEP=1.15;
-let radarZoomListenersAttached=false;
+window.radarZoomListenersAttached=false;
 
 function applyRadarZoom(){
   const canvas=document.getElementById('mainChart');
-  if(!canvas)return;
+  if(!canvas){console.warn('[ZOOM] canvas not found');return;}
   canvas.style.transform=`scale(${window.radarZoomScale})`;
   canvas.style.transformOrigin='center center';
   canvas.style.transition='transform 0.15s ease-out';
+  console.log('[ZOOM] applied scale:',window.radarZoomScale);
 }
 
 // Inicializar zoom una sola vez sobre el contenedor (no sobre el canvas que se recrea)
 function initRadarZoom(){
-  if(radarZoomListenersAttached)return;
+  if(window.radarZoomListenersAttached){console.log('[ZOOM] listeners already attached');return;}
   // Buscar el wrapper que contiene el canvas — este es persistente
   const wrap=document.querySelector('.chart-wrap');
-  if(!wrap)return;
+  if(!wrap){console.warn('[ZOOM] .chart-wrap not found yet, will retry');return;}
+  console.log('[ZOOM] attaching listeners to',wrap);
 
   // Listener de rueda del mouse
   wrap.addEventListener('wheel',function(e){
+    console.log('[ZOOM] wheel event, currentView=',currentView,'deltaY=',e.deltaY);
     if(currentView!=='radar')return;
     e.preventDefault();
     e.stopPropagation();
@@ -2434,13 +2437,20 @@ function initRadarZoom(){
 
   wrap.addEventListener('touchend',function(){pinchDist=0;});
 
-  radarZoomListenersAttached=true;
+  window.radarZoomListenersAttached=true;
+  console.log('[ZOOM] listeners successfully attached');
 }
 
-// Esta función se llama cada vez que se renderiza el radar, aplica el zoom actual
 function attachRadarZoom(chart){
-  initRadarZoom();// asegura que los listeners están en el wrapper (solo una vez)
-  applyRadarZoom();// re-aplicar el zoom al nuevo canvas
+  // Intentar inicializar (puede fallar si DOM no listo)
+  if(!window.radarZoomListenersAttached){
+    initRadarZoom();
+    // Reintentar si falló
+    if(!window.radarZoomListenersAttached){
+      setTimeout(initRadarZoom,200);
+    }
+  }
+  applyRadarZoom();
 }
 
 function resetRadarZoom(){
@@ -2458,7 +2468,11 @@ function updateZoomBtn(){
 }
 
 // Inicializar zoom cuando carga el DOM
-document.addEventListener('DOMContentLoaded',()=>{setTimeout(initRadarZoom,100);});
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>{setTimeout(initRadarZoom,200);});
+}else{
+  setTimeout(initRadarZoom,200);
+}
 // ── CAMBIOS SIN GUARDAR ───────────────────────────────────
 let hasUnsavedChanges=false;
 let loadedRaceId=null;
