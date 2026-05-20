@@ -2316,22 +2316,27 @@ function renderChart(rs,ss,rzs,rt,st,rzt,tot,tgt,allTargets){
     const tickCallback=radarNormalized?(v=>v+'%'):(v=>secToMmss(v));
     const stepSize=radarNormalized?20:60;
 
-    // Estado de zoom manual del radar (almacena escala 0-1, donde 1 = sin zoom)
-    if(typeof radarZoomScale==='undefined')window.radarZoomScale=1;
-    const baseMax=radarNormalized?Math.max(...[...runsData,...stationsData,...roxzonesData,...targetData].filter(v=>v!==null&&v!==undefined),100):null;
-    // Si hay zoom aplicado, ajustar el rango del eje radial
-    const scaleOptions={beginAtZero:true,grid:{color:gc},angleLines:{color:gc},
+    // ZOOM MANUAL DEL RADAR
+    // window.radarZoomScale: 1 = sin zoom; <1 = zoom in (acerca); >1 = zoom out
+    // Calculamos el max basado en los datos actuales y aplicamos la escala
+    if(typeof window.radarZoomScale==='undefined')window.radarZoomScale=1;
+    const allDataPoints=[...runsData,...stationsData,...roxzonesData,...targetData].filter(v=>v!==null&&v!==undefined&&v>0);
+    const naturalMax=allDataPoints.length?Math.max(...allDataPoints):(radarNormalized?120:400);
+    // Padding del 10% para que los puntos no toquen el borde
+    const paddedMax=naturalMax*1.1;
+    // Aplicar escala: zoom in (scale<1) reduce el max, mostrando datos más grandes
+    const scaledMax=paddedMax*window.radarZoomScale;
+    // Redondear hacia arriba al múltiplo del stepSize para tener ticks limpios
+    const finalMax=Math.max(stepSize,Math.ceil(scaledMax/stepSize)*stepSize);
+
+    const scaleOptions={
+      beginAtZero:true,
+      max:finalMax,
+      grid:{color:gc},
+      angleLines:{color:gc},
       ticks:{color:tc,font:{size:9},stepSize,callback:tickCallback,backdropColor:'transparent'},
-      pointLabels:{color:tc,font:{size:9}}};
-    // Aplicar zoom manual: limitar máximo del eje r
-    if(window.radarZoomScale&&window.radarZoomScale!==1){
-      // Calcular max original automáticamente y aplicar escala
-      const allValues=[...runsData,...stationsData,...roxzonesData,...targetData].filter(v=>v!==null&&v!==undefined&&v>0);
-      const dataMax=allValues.length?Math.max(...allValues):(radarNormalized?100:300);
-      // Zoom in = max menor (más cerca); zoom out = max mayor (más lejos)
-      const adjustedMax=Math.ceil(dataMax*window.radarZoomScale*1.15/stepSize)*stepSize;
-      scaleOptions.max=Math.max(stepSize,adjustedMax);
-    }
+      pointLabels:{color:tc,font:{size:9}}
+    };
 
     chartInstance=new Chart(ctx,{type:'radar',data:{labels,datasets},
       options:{responsive:true,maintainAspectRatio:false,
@@ -2381,10 +2386,10 @@ function toggleRadar(which,btn){
 }
 
 // ── ZOOM DEL RADAR (implementación manual sobre escala radial) ─────────
-let radarZoomScale=1;// 1 = sin zoom; <1 = zoom in; >1 = zoom out (no usado, limitamos a 0.3-1)
-const RADAR_ZOOM_MIN=0.25;// máximo nivel de zoom in (rango = 25% del original)
-const RADAR_ZOOM_MAX=1;   // sin zoom out (1 = vista completa)
-const RADAR_ZOOM_STEP=0.92;// factor multiplicativo por cada notch de scroll
+let radarZoomScale=1;// 1 = sin zoom; <1 = zoom in (acerca, datos más grandes); >1 = zoom out (aleja)
+const RADAR_ZOOM_MIN=0.4;// máximo nivel de zoom in (datos 2.5x más grandes)
+const RADAR_ZOOM_MAX=2.5;// máximo nivel de zoom out
+const RADAR_ZOOM_STEP=0.9;// factor multiplicativo por cada notch de scroll
 
 function attachRadarZoom(chart){
   if(!chart||!chart.canvas)return;
@@ -2400,9 +2405,11 @@ function attachRadarZoom(chart){
   canvas._zoomHandler=function(e){
     if(currentView!=='radar')return;
     e.preventDefault();
-    // Scroll hacia arriba (deltaY<0) = zoom in; abajo = zoom out
+    e.stopPropagation();
+    // Scroll hacia arriba (deltaY<0) = zoom in (scale disminuye); abajo = zoom out
     const factor=e.deltaY<0?RADAR_ZOOM_STEP:1/RADAR_ZOOM_STEP;
-    window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,window.radarZoomScale*factor));
+    const newScale=window.radarZoomScale*factor;
+    window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,newScale));
     onUpdate();
   };
   canvas.addEventListener('wheel',canvas._zoomHandler,{passive:false});
@@ -2425,8 +2432,10 @@ function attachRadarZoom(chart){
       const dy=e.touches[0].clientY-e.touches[1].clientY;
       const newDist=Math.sqrt(dx*dx+dy*dy);
       if(pinchDist>0){
-        const ratio=pinchDist/newDist;// pellizco abrir = ratio<1 = zoom in
-        window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,window.radarZoomScale*ratio));
+        // Abrir dedos (newDist mayor) = zoom in (scale baja)
+        const ratio=pinchDist/newDist;
+        const newScale=window.radarZoomScale*ratio;
+        window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,newScale));
         pinchDist=newDist;
         onUpdate();
       }
@@ -2447,7 +2456,9 @@ function resetRadarZoom(){
 function updateZoomBtn(chart){
   const btn=document.getElementById('tg-zoom-reset');
   if(!btn)return;
-  btn.style.display=(window.radarZoomScale&&window.radarZoomScale!==1)?'':'none';
+  // Mostrar botón si hay cualquier desviación del valor por defecto
+  const scale=window.radarZoomScale||1;
+  btn.style.display=(Math.abs(scale-1)>0.01)?'':'none';
 }
 // ── CAMBIOS SIN GUARDAR ───────────────────────────────────
 let hasUnsavedChanges=false;
