@@ -197,7 +197,17 @@
   .time-inputs .sep{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--faint);font-weight:500;}
   .cmp-col{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
   .cmp-actual{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;color:var(--text);}
-  .cmp-target{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(232,255,0,0.55);}
+  .cmp-target{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(232,255,0,0.55);cursor:pointer;padding:1px 4px;border-radius:2px;border:1px solid transparent;transition:all .15s;}
+  .cmp-target:hover{color:var(--accent);border-color:rgba(232,255,0,0.3);background:rgba(232,255,0,0.05);}
+  .cmp-target.overridden{color:var(--accent);font-weight:700;background:rgba(232,255,0,0.08);border-color:rgba(232,255,0,0.25);}
+  .cmp-target.editing{display:none;}
+  .cmp-target-edit{display:none;align-items:center;gap:1px;background:var(--surface3);border:1px solid var(--accent);border-radius:2px;padding:1px 3px;}
+  .cmp-target-edit.active{display:inline-flex;}
+  .cmp-target-edit input{width:22px;background:transparent;border:none;color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;text-align:center;outline:none;padding:0;-moz-appearance:textfield;}
+  .cmp-target-edit input::-webkit-outer-spin-button,.cmp-target-edit input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  .cmp-target-edit .sep{color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:10px;}
+  .cmp-target-edit .reset{background:transparent;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:0 2px;}
+  .cmp-target-edit .reset:hover{color:var(--err);}
   .cmp-delta{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;}
   .cmp-delta.ahead{color:var(--gs);}.cmp-delta.behind{color:var(--err);}
 
@@ -1447,6 +1457,131 @@ function switchTab(tab,btn){
 }
 
 // ── BUILD ROWS ────────────────────────────────────────────
+// ── OVERRIDES DE OBJETIVO POR SEGMENTO ──────────────────────────────────
+// Permite al usuario ajustar el objetivo individual de cualquier Run/Estación/Roxzone
+// Los overrides se guardan en window.storage / localStorage y son persistentes por preset
+// Estructura: {'75_r1': 250, '75_s3': 280, ...}  (clave = preset_segmentId, valor = segundos)
+let targetOverrides={};
+const OVERRIDES_KEY='hyrox-target-overrides-v1';
+
+async function loadTargetOverrides(){
+  try{
+    let raw;
+    if(HAS_CLAUDE_STORAGE){
+      const r=await window.storage.get(OVERRIDES_KEY);
+      raw=r?r.value:null;
+    }else{
+      raw=localStorage.getItem(OVERRIDES_KEY);
+    }
+    targetOverrides=raw?JSON.parse(raw):{};
+  }catch(e){targetOverrides={};}
+}
+
+async function saveTargetOverrides(){
+  try{
+    const json=JSON.stringify(targetOverrides);
+    if(HAS_CLAUDE_STORAGE){
+      await window.storage.set(OVERRIDES_KEY,json);
+    }else{
+      localStorage.setItem(OVERRIDES_KEY,json);
+    }
+  }catch(e){console.warn('overrides save error',e);}
+}
+
+function getOverrideKey(segmentId){
+  return currentPreset+'_'+segmentId;
+}
+
+function getTargetForSegment(segmentId,defaultValue){
+  const key=getOverrideKey(segmentId);
+  return targetOverrides[key]!==undefined?targetOverrides[key]:defaultValue;
+}
+
+function startEditTarget(segmentId){
+  const targetEl=document.getElementById(segmentId+'_target');
+  const editEl=document.getElementById(segmentId+'_target_edit');
+  if(!targetEl||!editEl)return;
+  // Tomar el valor actual mostrado y poner en inputs
+  const mEl=document.getElementById(segmentId+'_target_m');
+  const sEl=document.getElementById(segmentId+'_target_s');
+  // Buscar el valor por defecto del preset
+  const preset=PRESET_TARGETS[currentPreset]||PRESET_TARGETS[75];
+  const idx=findSegmentIndex(segmentId);
+  if(idx===null)return;
+  const defaultVal=idx.type==='run'?preset.runs[idx.i]:(idx.type==='station'?preset.stations[idx.i]:preset.roxzones[idx.i]);
+  const currentVal=getTargetForSegment(segmentId,defaultVal);
+  mEl.value=Math.floor(currentVal/60);
+  sEl.value=currentVal%60;
+  targetEl.classList.add('editing');
+  editEl.classList.add('active');
+  setTimeout(()=>{mEl.focus();mEl.select();},20);
+}
+
+function findSegmentIndex(segmentId){
+  let i=RUNS.findIndex(r=>r.id===segmentId);
+  if(i>=0)return {type:'run',i};
+  i=STATIONS.findIndex(s=>s.id===segmentId);
+  if(i>=0)return {type:'station',i};
+  i=ROXZONES.findIndex(r=>r.id===segmentId);
+  if(i>=0)return {type:'roxzone',i};
+  return null;
+}
+
+async function commitTargetOverride(segmentId){
+  const mEl=document.getElementById(segmentId+'_target_m');
+  const sEl=document.getElementById(segmentId+'_target_s');
+  if(!mEl||!sEl)return;
+  const m=parseInt(mEl.value)||0;
+  const s=parseInt(sEl.value)||0;
+  const totalSec=m*60+s;
+  // Validar valor razonable (0-20 min)
+  if(totalSec<0||totalSec>1200){
+    showToast('Valor fuera de rango (0-20 min)',true);
+    cancelTargetEdit(segmentId);
+    return;
+  }
+  // Buscar valor por defecto del preset
+  const preset=PRESET_TARGETS[currentPreset]||PRESET_TARGETS[75];
+  const idx=findSegmentIndex(segmentId);
+  if(!idx)return;
+  const defaultVal=idx.type==='run'?preset.runs[idx.i]:(idx.type==='station'?preset.stations[idx.i]:preset.roxzones[idx.i]);
+  const key=getOverrideKey(segmentId);
+  // Si el valor es igual al default, borrar override
+  if(totalSec===defaultVal){
+    delete targetOverrides[key];
+  }else{
+    targetOverrides[key]=totalSec;
+  }
+  await saveTargetOverrides();
+  cancelTargetEdit(segmentId);
+  onUpdate();
+}
+
+function cancelTargetEdit(segmentId){
+  const targetEl=document.getElementById(segmentId+'_target');
+  const editEl=document.getElementById(segmentId+'_target_edit');
+  if(targetEl)targetEl.classList.remove('editing');
+  if(editEl)editEl.classList.remove('active');
+}
+
+async function resetTargetOverride(segmentId){
+  const key=getOverrideKey(segmentId);
+  delete targetOverrides[key];
+  await saveTargetOverrides();
+  cancelTargetEdit(segmentId);
+  onUpdate();
+  showToast('✓ Objetivo restaurado al preset');
+}
+
+// Devuelve los arrays de objetivos (runs/stations/roxzones) con overrides aplicados
+function getEffectiveTargets(){
+  const preset=PRESET_TARGETS[currentPreset]||PRESET_TARGETS[75];
+  const runs=RUNS.map((r,i)=>getTargetForSegment(r.id,preset.runs[i]));
+  const stations=STATIONS.map((s,i)=>getTargetForSegment(s.id,preset.stations[i]));
+  const roxzones=ROXZONES.map((rz,i)=>getTargetForSegment(rz.id,preset.roxzones[i]));
+  return {runs,stations,roxzones};
+}
+
 function buildRow(item,container,type){
   const div=document.createElement('div');div.className='input-row';
   div.innerHTML=`<div class="row-label"><strong>${item.name}</strong><span>${item.sub||''}</span></div>
@@ -1458,12 +1593,35 @@ function buildRow(item,container,type){
     </div>
     <div class="cmp-col">
       <span class="cmp-actual" id="${item.id}_display">--:--</span>
-      <span class="cmp-target" id="${item.id}_target"></span>
+      <span class="cmp-target" id="${item.id}_target" onclick="startEditTarget('${item.id}')" title="Clic para ajustar objetivo de este segmento"></span>
+      <span class="cmp-target-edit" id="${item.id}_target_edit">
+        <input type="number" min="0" max="20" id="${item.id}_target_m" placeholder="0">
+        <span class="sep">:</span>
+        <input type="number" min="0" max="59" id="${item.id}_target_s" placeholder="0">
+        <button type="button" class="reset" onclick="resetTargetOverride('${item.id}')" title="Restaurar valor del preset">↺</button>
+      </span>
       <span class="cmp-delta" id="${item.id}_delta"></span>
     </div>
   </div>`;
   container.appendChild(div);
-  div.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{inp.classList.remove('filled');onUpdate();markUnsaved();}));
+  div.querySelectorAll('.time-inputs input').forEach(inp=>inp.addEventListener('input',()=>{inp.classList.remove('filled');onUpdate();markUnsaved();}));
+  // Listeners para los inputs de edición de objetivo
+  const tm=div.querySelector('#'+item.id+'_target_m');
+  const ts=div.querySelector('#'+item.id+'_target_s');
+  [tm,ts].forEach(inp=>{
+    if(!inp)return;
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();commitTargetOverride(item.id);}
+      else if(e.key==='Escape'){e.preventDefault();cancelTargetEdit(item.id);}
+    });
+    inp.addEventListener('blur',()=>{
+      // Solo confirmar al hacer blur fuera del par de inputs
+      setTimeout(()=>{
+        const editEl=document.getElementById(item.id+'_target_edit');
+        if(editEl&&!editEl.contains(document.activeElement))commitTargetOverride(item.id);
+      },50);
+    });
+  });
 }
 function buildAll(){
   RUNS.forEach(r=>buildRow(r,document.getElementById('run-inputs'),'run'));
@@ -2004,25 +2162,36 @@ function onUpdate(){
   const tgt=getCurrentTargetSec();
   // Si el preset actual no existe (ej: avg sin historial), fallback a 75
   const preset=PRESET_TARGETS[currentPreset]||PRESET_TARGETS[75];
-  document.getElementById('tgt-display').textContent=secToHmmss(tgt);
   const allItems=[...RUNS,...STATIONS,...ROXZONES];
   const allSecs=[...rs,...ss,...rzs];
-  const allTargets=[...preset.runs,...preset.stations,...preset.roxzones];
+  // Aplicar overrides individuales sobre el preset base
+  const baseTargets=[...preset.runs,...preset.stations,...preset.roxzones];
+  const allTargets=allItems.map((item,i)=>getTargetForSegment(item.id,baseTargets[i]));
+  // Recalcular total objetivo considerando overrides
+  const tgtTotalWithOverrides=allTargets.reduce((a,b)=>a+b,0);
+  document.getElementById('tgt-display').textContent=secToHmmss(tgtTotalWithOverrides);
   allItems.forEach((item,i)=>{
-    const actual=allSecs[i],segTgt=allTargets[i];
+    const actual=allSecs[i],segTgt=allTargets[i],defaultTgt=baseTargets[i];
     const de=document.getElementById(item.id+'_display'),te=document.getElementById(item.id+'_target'),dl=document.getElementById(item.id+'_delta');
     if(de)de.textContent=actual>0?secToMmss(actual):'--:--';
-    if(te)te.textContent='obj '+secToMmss(segTgt);
+    if(te){
+      const isOverride=segTgt!==defaultTgt;
+      te.textContent=(isOverride?'★ ':'obj ')+secToMmss(segTgt);
+      te.classList.toggle('overridden',isOverride);
+      te.title=isOverride
+        ?`Objetivo ajustado manualmente (preset: ${secToMmss(defaultTgt)}). Clic para editar.`
+        :'Clic para ajustar objetivo de este segmento';
+    }
     if(dl){if(actual>0){const d=actual-segTgt,a=Math.abs(d);dl.textContent=(d>0?'+':'-')+Math.floor(a/60)+':'+String(a%60).padStart(2,'0');dl.className='cmp-delta '+(d>0?'behind':'ahead');}else{dl.textContent='';dl.className='cmp-delta';}}
   });
   document.getElementById('mc-total').textContent=tot>0?secToHmmss(tot):'--:--';
   document.getElementById('mc-run').textContent=rt>0?secToMmss(rt):'--:--';
   document.getElementById('mc-stations').textContent=st>0?secToMmss(st):'--:--';
   const mcRox=document.getElementById('mc-roxzones');if(mcRox)mcRox.textContent=rzt>0?secToMmss(rzt):'--:--';
-  // Objetivos en las sub-etiquetas
-  const tgtRunTotal=preset.runs.reduce((a,b)=>a+b,0);
-  const tgtStTotal=preset.stations.reduce((a,b)=>a+b,0);
-  const tgtRzTotal=preset.roxzones.reduce((a,b)=>a+b,0);
+  // Objetivos en las sub-etiquetas (considerando overrides)
+  const tgtRunTotal=allTargets.slice(0,8).reduce((a,b)=>a+b,0);
+  const tgtStTotal=allTargets.slice(8,16).reduce((a,b)=>a+b,0);
+  const tgtRzTotal=allTargets.slice(16,23).reduce((a,b)=>a+b,0);
   const tgtTotal=tgtRunTotal+tgtStTotal+tgtRzTotal;
   const setObj=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent='obj '+secToMmss(val);};
   document.getElementById('mc-total-obj').textContent='obj '+secToHmmss(tgtTotal);
@@ -2065,18 +2234,19 @@ function renderChart(rs,ss,rzs,rt,st,rzt,tot,tgt,allTargets){
     };
 
     let runsData,stationsData,roxzonesData,targetData;
+    const effTargets=getEffectiveTargets();
     if(radarNormalized){
       // Normalizado: cada eje es % del objetivo (100% = igual al objetivo)
-      runsData=rs.map((v,i)=>toPct(v,preset.runs[i]));
-      stationsData=ss.map((v,i)=>toPct(v,preset.stations[i]));
-      roxzonesData=rzs.map((v,i)=>toPct(v,preset.roxzones[i]));
+      runsData=rs.map((v,i)=>toPct(v,effTargets.runs[i]));
+      stationsData=ss.map((v,i)=>toPct(v,effTargets.stations[i]));
+      roxzonesData=rzs.map((v,i)=>toPct(v,effTargets.roxzones[i]));
       targetData=Array(labels.length).fill(100);// línea constante a 100%
     }else{
       // Modo absoluto en segundos
       runsData=rs;stationsData=ss;roxzonesData=rzs;
       targetData=radarShowRoxzones
-        ? [...preset.runs,...preset.stations,...preset.roxzones]
-        : [...preset.runs,...preset.stations];
+        ? [...effTargets.runs,...effTargets.stations,...effTargets.roxzones]
+        : [...effTargets.runs,...effTargets.stations];
     }
 
     const datasets=[
@@ -2227,7 +2397,8 @@ function exportCSV(){
   const preset=PRESET_TARGETS[currentPreset]||PRESET_TARGETS[75];
   const allItems=[...RUNS,...STATIONS,...ROXZONES];
   const allSecs=allItems.map(i=>getSec(i.id));
-  const allTargets=[...preset.runs,...preset.stations,...preset.roxzones];
+  const effTgts=getEffectiveTargets();
+  const allTargets=[...effTgts.runs,...effTgts.stations,...effTgts.roxzones];
   const tot=allSecs.reduce((a,b)=>a+b,0);
   const rows=[['Tipo','Nombre','Real','Objetivo','Diferencia']];
   allItems.forEach((item,i)=>{
@@ -2620,6 +2791,7 @@ function openSheet(){
 }
 buildAll();setPreset(75);
 loadOAuthState();
+loadTargetOverrides();// Cargar ajustes de objetivo por segmento
 updateGoogleBtn();
 updateSyncBar();
 recomputeAvgPreset();// Calcular promedio del histórico si existen carreras
