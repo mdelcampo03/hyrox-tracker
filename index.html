@@ -15,8 +15,6 @@
 <!-- Google Identity Services para OAuth -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -493,7 +491,7 @@
         <button class="toggle-btn zoom-reset" id="tg-zoom-reset" onclick="resetRadarZoom()" style="display:none;" title="Restaurar zoom del radar">
           🔍 Reset zoom
         </button>
-        <span class="zoom-hint" id="zoom-hint" title="Zoom: rueda del mouse o pellizco · Mover: arrastrar">🔎 zoom: scroll / pinch</span>
+        <span class="zoom-hint" id="zoom-hint" title="Zoom in: scroll arriba o pellizco abriendo dedos · Zoom out: scroll abajo o pellizco cerrando">🔎 zoom: scroll / pinch sobre la gráfica</span>
       </div>
       <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
       <div class="legend">
@@ -2318,28 +2316,32 @@ function renderChart(rs,ss,rzs,rt,st,rzt,tot,tgt,allTargets){
     const tickCallback=radarNormalized?(v=>v+'%'):(v=>secToMmss(v));
     const stepSize=radarNormalized?20:60;
 
+    // Estado de zoom manual del radar (almacena escala 0-1, donde 1 = sin zoom)
+    if(typeof radarZoomScale==='undefined')window.radarZoomScale=1;
+    const baseMax=radarNormalized?Math.max(...[...runsData,...stationsData,...roxzonesData,...targetData].filter(v=>v!==null&&v!==undefined),100):null;
+    // Si hay zoom aplicado, ajustar el rango del eje radial
+    const scaleOptions={beginAtZero:true,grid:{color:gc},angleLines:{color:gc},
+      ticks:{color:tc,font:{size:9},stepSize,callback:tickCallback,backdropColor:'transparent'},
+      pointLabels:{color:tc,font:{size:9}}};
+    // Aplicar zoom manual: limitar máximo del eje r
+    if(window.radarZoomScale&&window.radarZoomScale!==1){
+      // Calcular max original automáticamente y aplicar escala
+      const allValues=[...runsData,...stationsData,...roxzonesData,...targetData].filter(v=>v!==null&&v!==undefined&&v>0);
+      const dataMax=allValues.length?Math.max(...allValues):(radarNormalized?100:300);
+      // Zoom in = max menor (más cerca); zoom out = max mayor (más lejos)
+      const adjustedMax=Math.ceil(dataMax*window.radarZoomScale*1.15/stepSize)*stepSize;
+      scaleOptions.max=Math.max(stepSize,adjustedMax);
+    }
+
     chartInstance=new Chart(ctx,{type:'radar',data:{labels,datasets},
       options:{responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},
           tooltip:{callbacks:{label:c=>{
             const v=c.raw;if(v===null||v===undefined)return '';
             return ' '+c.dataset.label+': '+(radarNormalized?v+'% del objetivo':secToMmss(v));
-          }}},
-          zoom:{
-            pan:{enabled:true,mode:'xy',scaleMode:'xy'},
-            zoom:{
-              wheel:{enabled:true,speed:0.1},
-              pinch:{enabled:true},
-              mode:'xy',
-              scaleMode:'xy',
-              onZoom:({chart})=>{updateZoomBtn(chart);}
-            },
-            limits:{r:{min:'original',max:'original',minRange:30}}
-          }
-        },
-        scales:{r:{beginAtZero:true,grid:{color:gc},angleLines:{color:gc},
-          ticks:{color:tc,font:{size:9},stepSize,callback:tickCallback,backdropColor:'transparent'},
-          pointLabels:{color:tc,font:{size:9}}}}}});
+          }}}},
+        scales:{r:scaleOptions}}});
+    attachRadarZoom(chartInstance);
     updateZoomBtn(chartInstance);
   }else if(currentView==='bar'){
     const colors=[...Array(8).fill('rgba(77,171,247,0.7)'),...Array(8).fill('rgba(0,201,167,0.7)'),...Array(8).fill('rgba(255,159,67,0.7)')];
@@ -2378,25 +2380,74 @@ function toggleRadar(which,btn){
   onUpdate();
 }
 
-// ── ZOOM DEL RADAR ───────────────────────────────────────
-function resetRadarZoom(){
-  if(chartInstance&&typeof chartInstance.resetZoom==='function'){
-    chartInstance.resetZoom();
-    updateZoomBtn(chartInstance);
-    showToast('✓ Zoom restablecido');
+// ── ZOOM DEL RADAR (implementación manual sobre escala radial) ─────────
+let radarZoomScale=1;// 1 = sin zoom; <1 = zoom in; >1 = zoom out (no usado, limitamos a 0.3-1)
+const RADAR_ZOOM_MIN=0.25;// máximo nivel de zoom in (rango = 25% del original)
+const RADAR_ZOOM_MAX=1;   // sin zoom out (1 = vista completa)
+const RADAR_ZOOM_STEP=0.92;// factor multiplicativo por cada notch de scroll
+
+function attachRadarZoom(chart){
+  if(!chart||!chart.canvas)return;
+  const canvas=chart.canvas;
+  // Limpiar listener anterior si lo hay
+  if(canvas._zoomHandler)canvas.removeEventListener('wheel',canvas._zoomHandler);
+  if(canvas._pinchHandlers){
+    canvas.removeEventListener('touchstart',canvas._pinchHandlers.start);
+    canvas.removeEventListener('touchmove',canvas._pinchHandlers.move);
+    canvas.removeEventListener('touchend',canvas._pinchHandlers.end);
   }
+  // Listener de rueda del mouse
+  canvas._zoomHandler=function(e){
+    if(currentView!=='radar')return;
+    e.preventDefault();
+    // Scroll hacia arriba (deltaY<0) = zoom in; abajo = zoom out
+    const factor=e.deltaY<0?RADAR_ZOOM_STEP:1/RADAR_ZOOM_STEP;
+    window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,window.radarZoomScale*factor));
+    onUpdate();
+  };
+  canvas.addEventListener('wheel',canvas._zoomHandler,{passive:false});
+
+  // Listener de pellizco táctil
+  let pinchDist=0;
+  canvas._pinchHandlers={
+    start:function(e){
+      if(currentView!=='radar')return;
+      if(e.touches.length===2){
+        const dx=e.touches[0].clientX-e.touches[1].clientX;
+        const dy=e.touches[0].clientY-e.touches[1].clientY;
+        pinchDist=Math.sqrt(dx*dx+dy*dy);
+      }
+    },
+    move:function(e){
+      if(currentView!=='radar'||e.touches.length!==2)return;
+      e.preventDefault();
+      const dx=e.touches[0].clientX-e.touches[1].clientX;
+      const dy=e.touches[0].clientY-e.touches[1].clientY;
+      const newDist=Math.sqrt(dx*dx+dy*dy);
+      if(pinchDist>0){
+        const ratio=pinchDist/newDist;// pellizco abrir = ratio<1 = zoom in
+        window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,window.radarZoomScale*ratio));
+        pinchDist=newDist;
+        onUpdate();
+      }
+    },
+    end:function(){pinchDist=0;}
+  };
+  canvas.addEventListener('touchstart',canvas._pinchHandlers.start,{passive:false});
+  canvas.addEventListener('touchmove',canvas._pinchHandlers.move,{passive:false});
+  canvas.addEventListener('touchend',canvas._pinchHandlers.end);
+}
+
+function resetRadarZoom(){
+  window.radarZoomScale=1;
+  onUpdate();
+  showToast('✓ Zoom restablecido');
 }
 
 function updateZoomBtn(chart){
   const btn=document.getElementById('tg-zoom-reset');
-  if(!btn||!chart)return;
-  // Detectar si hay zoom activo (escala diferente al rango original)
-  try{
-    const scale=chart.scales.r;
-    if(!scale){btn.style.display='none';return;}
-    const zoomLevel=chart.getZoomLevel?chart.getZoomLevel():1;
-    btn.style.display=(zoomLevel&&zoomLevel!==1)?'':'none';
-  }catch(e){btn.style.display='none';}
+  if(!btn)return;
+  btn.style.display=(window.radarZoomScale&&window.radarZoomScale!==1)?'':'none';
 }
 // ── CAMBIOS SIN GUARDAR ───────────────────────────────────
 let hasUnsavedChanges=false;
