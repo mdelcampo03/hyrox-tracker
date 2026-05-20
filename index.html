@@ -2377,78 +2377,70 @@ function toggleRadar(which,btn){
 let radarZoomScale=1;// 1 = tamaño normal; >1 = zoom in (más grande); <1 = zoom out
 const RADAR_ZOOM_MIN=0.5;
 const RADAR_ZOOM_MAX=3;
-const RADAR_ZOOM_STEP=1.15;// factor de multiplicación por cada notch (15% más grande/pequeño)
+const RADAR_ZOOM_STEP=1.15;
+let radarZoomListenersAttached=false;
 
 function applyRadarZoom(){
   const canvas=document.getElementById('mainChart');
   if(!canvas)return;
-  // Aplicar transform CSS al canvas — esto escala todo (líneas, puntos, números, etiquetas)
   canvas.style.transform=`scale(${window.radarZoomScale})`;
   canvas.style.transformOrigin='center center';
   canvas.style.transition='transform 0.15s ease-out';
 }
 
-function attachRadarZoom(chart){
-  if(!chart||!chart.canvas)return;
-  const canvas=chart.canvas;
-  // Aplicar zoom inicial si ya había uno
-  applyRadarZoom();
+// Inicializar zoom una sola vez sobre el contenedor (no sobre el canvas que se recrea)
+function initRadarZoom(){
+  if(radarZoomListenersAttached)return;
+  // Buscar el wrapper que contiene el canvas — este es persistente
+  const wrap=document.querySelector('.chart-wrap');
+  if(!wrap)return;
 
-  // Limpiar listeners anteriores si existen
-  if(canvas._zoomHandler)canvas.removeEventListener('wheel',canvas._zoomHandler);
-  if(canvas._pinchHandlers){
-    canvas.removeEventListener('touchstart',canvas._pinchHandlers.start);
-    canvas.removeEventListener('touchmove',canvas._pinchHandlers.move);
-    canvas.removeEventListener('touchend',canvas._pinchHandlers.end);
-  }
-  // También al contenedor por si el scroll cae en el borde
-  const wrap=canvas.parentElement;
-
-  // Wheel handler
-  canvas._zoomHandler=function(e){
+  // Listener de rueda del mouse
+  wrap.addEventListener('wheel',function(e){
     if(currentView!=='radar')return;
     e.preventDefault();
     e.stopPropagation();
-    // Scroll arriba (deltaY<0) = zoom in (multiplica); abajo = zoom out (divide)
     const factor=e.deltaY<0?RADAR_ZOOM_STEP:1/RADAR_ZOOM_STEP;
     const newScale=window.radarZoomScale*factor;
     window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,newScale));
     applyRadarZoom();
     updateZoomBtn();
-  };
-  canvas.addEventListener('wheel',canvas._zoomHandler,{passive:false});
-  if(wrap)wrap.addEventListener('wheel',canvas._zoomHandler,{passive:false});
+  },{passive:false});
 
-  // Pinch handler (móvil)
+  // Listeners de pellizco táctil
   let pinchDist=0;
-  canvas._pinchHandlers={
-    start:function(e){
-      if(currentView!=='radar'||e.touches.length!==2)return;
-      const dx=e.touches[0].clientX-e.touches[1].clientX;
-      const dy=e.touches[0].clientY-e.touches[1].clientY;
-      pinchDist=Math.sqrt(dx*dx+dy*dy);
-    },
-    move:function(e){
-      if(currentView!=='radar'||e.touches.length!==2)return;
-      e.preventDefault();
-      const dx=e.touches[0].clientX-e.touches[1].clientX;
-      const dy=e.touches[0].clientY-e.touches[1].clientY;
-      const newDist=Math.sqrt(dx*dx+dy*dy);
-      if(pinchDist>0){
-        // Abrir dedos (newDist > pinchDist) = zoom in
-        const ratio=newDist/pinchDist;
-        const newScale=window.radarZoomScale*ratio;
-        window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,newScale));
-        pinchDist=newDist;
-        applyRadarZoom();
-        updateZoomBtn();
-      }
-    },
-    end:function(){pinchDist=0;}
-  };
-  canvas.addEventListener('touchstart',canvas._pinchHandlers.start,{passive:false});
-  canvas.addEventListener('touchmove',canvas._pinchHandlers.move,{passive:false});
-  canvas.addEventListener('touchend',canvas._pinchHandlers.end);
+  wrap.addEventListener('touchstart',function(e){
+    if(currentView!=='radar'||e.touches.length!==2)return;
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    pinchDist=Math.sqrt(dx*dx+dy*dy);
+  },{passive:false});
+
+  wrap.addEventListener('touchmove',function(e){
+    if(currentView!=='radar'||e.touches.length!==2)return;
+    e.preventDefault();
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    const newDist=Math.sqrt(dx*dx+dy*dy);
+    if(pinchDist>0){
+      const ratio=newDist/pinchDist;
+      const newScale=window.radarZoomScale*ratio;
+      window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,newScale));
+      pinchDist=newDist;
+      applyRadarZoom();
+      updateZoomBtn();
+    }
+  },{passive:false});
+
+  wrap.addEventListener('touchend',function(){pinchDist=0;});
+
+  radarZoomListenersAttached=true;
+}
+
+// Esta función se llama cada vez que se renderiza el radar, aplica el zoom actual
+function attachRadarZoom(chart){
+  initRadarZoom();// asegura que los listeners están en el wrapper (solo una vez)
+  applyRadarZoom();// re-aplicar el zoom al nuevo canvas
 }
 
 function resetRadarZoom(){
@@ -2464,6 +2456,9 @@ function updateZoomBtn(){
   const scale=window.radarZoomScale||1;
   btn.style.display=(Math.abs(scale-1)>0.01)?'':'none';
 }
+
+// Inicializar zoom cuando carga el DOM
+document.addEventListener('DOMContentLoaded',()=>{setTimeout(initRadarZoom,100);});
 // ── CAMBIOS SIN GUARDAR ───────────────────────────────────
 let hasUnsavedChanges=false;
 let loadedRaceId=null;
