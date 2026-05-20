@@ -1545,8 +1545,31 @@ async function commitTargetOverride(segmentId){
   const idx=findSegmentIndex(segmentId);
   if(!idx)return;
   const defaultVal=idx.type==='run'?preset.runs[idx.i]:(idx.type==='station'?preset.stations[idx.i]:preset.roxzones[idx.i]);
+
+  // PROPAGACIÓN: si el segmento es un Run y el preset NO es 'avg',
+  // propagar el valor a los otros 7 Runs (porque conceptualmente comparten objetivo de ritmo/km)
+  const shouldPropagate=idx.type==='run'&&currentPreset!=='avg';
+  if(shouldPropagate){
+    let countPropagated=0;
+    RUNS.forEach((r,i)=>{
+      const key=currentPreset+'_'+r.id;
+      const defRun=preset.runs[i];
+      if(totalSec===defRun){
+        delete targetOverrides[key];// igual al default → eliminar override
+      }else{
+        targetOverrides[key]=totalSec;
+      }
+      if(r.id!==segmentId)countPropagated++;
+    });
+    await saveTargetOverrides();
+    cancelTargetEdit(segmentId);
+    onUpdate();
+    showToast(`✓ Objetivo aplicado a los 8 Runs (${secToMmss(totalSec)}/km)`);
+    return;
+  }
+
+  // Comportamiento normal (estaciones, roxzones o cuando preset='avg')
   const key=getOverrideKey(segmentId);
-  // Si el valor es igual al default, borrar override
   if(totalSec===defaultVal){
     delete targetOverrides[key];
   }else{
@@ -1565,6 +1588,19 @@ function cancelTargetEdit(segmentId){
 }
 
 async function resetTargetOverride(segmentId){
+  const idx=findSegmentIndex(segmentId);
+  // Si es un Run y NO estamos en 'avg', limpiar override de los 8 Runs
+  if(idx&&idx.type==='run'&&currentPreset!=='avg'){
+    RUNS.forEach(r=>{
+      delete targetOverrides[currentPreset+'_'+r.id];
+    });
+    await saveTargetOverrides();
+    cancelTargetEdit(segmentId);
+    onUpdate();
+    showToast('✓ Objetivos de Running restaurados al preset');
+    return;
+  }
+  // Comportamiento normal para estaciones, roxzones o preset avg
   const key=getOverrideKey(segmentId);
   delete targetOverrides[key];
   await saveTargetOverrides();
