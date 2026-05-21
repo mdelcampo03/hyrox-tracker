@@ -421,6 +421,61 @@
   .rp-footer{padding:12px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-shrink:0;background:var(--surface2);}
   .rp-export-hint{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);margin-right:auto;}
 
+  /* ── LIMITING SEGMENT MODAL ── */
+  .ls-modal{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--accent);border-radius:0 0 2px 2px;padding:0;width:min(640px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+  .ls-modal-head{padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--surface2);}
+  .ls-modal-title{font-family:'Archivo Black',sans-serif;font-size:1.2rem;letter-spacing:-0.02em;text-transform:uppercase;color:var(--accent);flex:1;}
+  .ls-modal-close{background:transparent;border:none;color:var(--faint);font-size:1.2rem;cursor:pointer;padding:4px 8px;border-radius:2px;transition:color .15s;}
+  .ls-modal-close:hover{color:var(--err);}
+  .ls-body{overflow-y:auto;flex:1;padding:16px 24px 20px;}
+  .ls-empty{padding:30px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--faint);line-height:2;}
+  .ls-section-title{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin:14px 0 10px;display:flex;align-items:center;gap:10px;}
+  .ls-section-title::after{content:"";flex:1;height:1px;background:var(--border);}
+  .ls-section-title:first-child{margin-top:0;}
+  .ls-summary{background:var(--surface2);border-left:3px solid var(--accent);padding:12px 14px;border-radius:2px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);line-height:1.6;}
+  .ls-summary strong{color:var(--accent);}
+
+  /* Top 3 cards */
+  .ls-top3{display:flex;flex-direction:column;gap:8px;margin-bottom:6px;}
+  .ls-card{background:var(--surface2);border:1px solid var(--border);border-radius:2px;padding:12px 14px;display:grid;grid-template-columns:32px 1fr auto;align-items:center;gap:12px;transition:border-color .15s;}
+  .ls-card:hover{border-color:rgba(232,255,0,0.4);}
+  .ls-card.rank1{border-left:3px solid var(--err);}
+  .ls-card.rank2{border-left:3px solid var(--warn);}
+  .ls-card.rank3{border-left:3px solid var(--accent);}
+  .ls-rank{font-family:'Archivo Black',sans-serif;font-size:1.6rem;color:var(--faint);letter-spacing:-0.04em;text-align:center;}
+  .ls-card.rank1 .ls-rank{color:var(--err);}
+  .ls-card.rank2 .ls-rank{color:var(--warn);}
+  .ls-card.rank3 .ls-rank{color:var(--accent);}
+  .ls-card-info{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .ls-card-name{font-family:'Archivo Black',sans-serif;font-size:13px;letter-spacing:-0.01em;color:var(--text);text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+  .ls-card-badge{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:0.12em;padding:2px 6px;border-radius:2px;}
+  .ls-card-badge.run{background:rgba(77,159,255,0.15);color:var(--run);}
+  .ls-card-badge.ws{background:rgba(153,255,102,0.1);color:var(--station);}
+  .ls-card-badge.rz{background:rgba(181,181,176,0.1);color:var(--roxzone);}
+  .ls-card-detail{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+  .ls-card-detail strong{color:var(--text);}
+  .ls-card-metrics{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+  .ls-card-delta{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--err);}
+  .ls-card-pct{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);}
+  .ls-tip{margin-top:6px;padding:8px 12px;background:rgba(232,255,0,0.04);border:1px dashed rgba(232,255,0,0.2);border-radius:2px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);line-height:1.6;display:none;}
+  .ls-tip.visible{display:block;}
+  .ls-tip strong{color:var(--accent);}
+
+  /* Expandable full ranking */
+  .ls-expand-btn{margin-top:14px;width:100%;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:9px;background:transparent;border:1px dashed var(--border);border-radius:2px;color:var(--muted);cursor:pointer;transition:all .15s;}
+  .ls-expand-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(232,255,0,0.03);}
+  .ls-full-list{display:none;margin-top:12px;}
+  .ls-full-list.open{display:block;}
+  .ls-row{display:grid;grid-template-columns:24px 1fr auto auto;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.03);font-family:'JetBrains Mono',monospace;font-size:11px;}
+  .ls-row:hover{background:var(--surface2);}
+  .ls-row-rank{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);text-align:right;}
+  .ls-row-name{display:flex;align-items:center;gap:8px;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .ls-row-delta{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;text-align:right;min-width:50px;}
+  .ls-row-delta.behind{color:var(--err);}
+  .ls-row-delta.ahead{color:var(--station);}
+  .ls-row-delta.neutral{color:var(--faint);}
+  .ls-row-pct{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);text-align:right;min-width:40px;}
+
 </style>
 </head>
 <body>
@@ -518,6 +573,7 @@
   <span class="target-label">→ <span class="target-display" id="tgt-display">1:15:00</span></span>
   <div class="target-gap neutral" id="tgt-gap">— sin datos</div>
   <button class="btn" style="margin-left:8px;border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="openRacePlan()" title="Generar plan de carrera basado en el objetivo actual">🗓 Race Plan</button>
+  <button class="btn" style="border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="openLimitingSegment()" title="Analizar qué segmentos te cuestan más tiempo">🎯 Segmento Limitante</button>
 </div>
 
 <div class="main-tabs">
@@ -573,7 +629,7 @@
         <button class="toggle-btn zoom-ctrl" id="tg-zoom-in" onclick="zoomRadar(1)" title="Acercar (+15%)">🔍 +</button>
         <button class="toggle-btn zoom-ctrl" id="tg-zoom-out" onclick="zoomRadar(-1)" title="Alejar (-15%)">🔍 −</button>
         <button class="toggle-btn zoom-reset" id="tg-zoom-reset" onclick="resetRadarZoom()" style="display:none;" title="Restaurar zoom al 100%">⟲ Reset (<span id="zoom-pct">100%</span>)</button>
-        <span class="zoom-hint" id="zoom-hint" title="Botones para tap · Scroll o pinch sobre el radar para ajuste fino">🔎 +/− para zoom · scroll/pinch sobre el radar</span>
+        <span class="zoom-hint" id="zoom-hint" title="Usa los botones +/− o pinch (mobile) para acercar la gráfica">🔎 +/− para zoom · pinch en mobile</span>
       </div>
       <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
       <div class="legend">
@@ -2623,19 +2679,6 @@ function initRadarZoom(){
   if(!wrap){console.warn('[ZOOM] .chart-wrap not found yet, will retry');return;}
   console.log('[ZOOM] attaching listeners to',wrap);
 
-  // Listener de rueda del mouse
-  wrap.addEventListener('wheel',function(e){
-    console.log('[ZOOM] wheel event, currentView=',currentView,'deltaY=',e.deltaY);
-    if(currentView!=='radar')return;
-    e.preventDefault();
-    e.stopPropagation();
-    const factor=e.deltaY<0?RADAR_ZOOM_STEP:1/RADAR_ZOOM_STEP;
-    const newScale=window.radarZoomScale*factor;
-    window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,newScale));
-    applyRadarZoom();
-    updateZoomBtn();
-  },{passive:false});
-
   // Listeners de pellizco táctil
   let pinchDist=0;
   wrap.addEventListener('touchstart',function(e){
@@ -3575,6 +3618,206 @@ function _exportRacePlanImage_legacy() {
   showToast('✓ Race plan exportado como imagen');
 }
 
+
+// ── SEGMENTO LIMITANTE ────────────────────────────────────────────────────────
+// Identifica qué segmentos te están costando más tiempo relativo al objetivo
+// Fórmula: Score = delta_abs × (1 + delta_rel_pct/100)
+//   - Premia pérdidas absolutas grandes (Wall Balls +60s pesa mucho)
+//   - Pero penaliza extra si además estás muy lejos en % de tu objetivo
+//   - Roxzones cortas no dominan el ranking solo por % alto sobre números pequeños
+//
+// Tips de entrenamiento por tipo de segmento limitante:
+const LS_TIPS = {
+  s1: 'Mejora técnica del catch y drive. Intervalos cortos de 250m a alta intensidad + bloques largos de 1000m a ritmo carrera.',
+  s2: 'Fuerza unilateral (sentadillas búlgaras, prensa) + práctica con trineo cargado. Trabaja la posición baja y empuje continuo.',
+  s3: 'Refuerza isquios y dorsal (peso muerto, remo, pull-up). El sled pull requiere tracción explosiva con buena base postural.',
+  s4: 'Combina burpees por tiempo (EMOM 10 burpees) con saltos pliométricos. Trabaja transición de suelo a salto sin descanso.',
+  s5: 'Misma lógica que SkiErg pero más posterior. Intervalos 500m con foco en piernas-empuje + bloques largos de cadencia controlada.',
+  s6: 'Agarre y core. Farmer carries más pesados de los de carrera pero distancias cortas. Dead hangs y plancha lateral.',
+  s7: 'Volumen de lunges con peso similar al sandbag (15-20kg M / 10-15kg W). Práctica zancadas largas sin tocar rodilla.',
+  s8: 'Squat técnico + lanzamiento al target. Series EMOM de 15-20 wall balls. Trabaja respiración y dosificación del esfuerzo.',
+  run: 'Mejora aeróbica base con bloques de 4-8×1km a ritmo objetivo. Suma fartlek y carreras largas para resistencia.',
+  rz: 'Las roxzones reflejan eficiencia de transición: salida rápida de estación, ritmo controlado al siguiente trabajo. Practica el cambio mental en simulacros.',
+};
+
+const LS_TYPE_LABELS = {
+  run: { code:'RUN', cls:'run' },
+  station: { code:'WS', cls:'ws' },
+  rz: { code:'RZ', cls:'rz' },
+};
+
+function openLimitingSegment() {
+  document.getElementById('limitingSegmentModal').classList.add('open');
+  renderLimitingSegment();
+}
+
+function closeLimitingSegment() {
+  document.getElementById('limitingSegmentModal').classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  const modal = document.getElementById('limitingSegmentModal');
+  if(e.target === modal) closeLimitingSegment();
+});
+
+function renderLimitingSegment() {
+  const body = document.getElementById('ls-body');
+  if(!body) return;
+
+  // Recolectar datos actuales del tracker
+  const rs = RUNS.map(r => getSec(r.id));
+  const ss = STATIONS.map(s => getSec(s.id));
+  const rzs = ROXZONES.map(r => getSec(r.id));
+  const allActual = [...rs, ...ss, ...rzs];
+  const totalSec = allActual.reduce((a,b) => a+b, 0);
+
+  if(totalSec === 0) {
+    body.innerHTML = '<div class="ls-empty">No hay carrera cargada en el tracker.<br>Carga un archivo .fit, pega los splits o ingresa los tiempos manualmente para ver tu análisis.</div>';
+    return;
+  }
+
+  // Objetivos efectivos (preset + overrides)
+  const eff = getEffectiveTargets();
+  const allTargets = [...eff.runs, ...eff.stations, ...eff.roxzones];
+  const allItems = [...RUNS, ...STATIONS, ...ROXZONES];
+  const allTypes = [...Array(8).fill('run'), ...Array(8).fill('station'), ...Array(7).fill('rz')];
+
+  // Calcular métricas por segmento
+  const analysis = allItems.map((item, i) => {
+    const actual = allActual[i];
+    const target = allTargets[i];
+    const type = allTypes[i];
+    const filledIn = actual > 0;
+    const deltaAbs = filledIn ? actual - target : 0;
+    const deltaPct = filledIn && target > 0 ? (deltaAbs / target) * 100 : 0;
+    // Score: solo penaliza si vas BEHIND (delta > 0)
+    // Para los que van AHEAD (mejor que objetivo) el score es 0 o negativo, no entran al ranking
+    const score = deltaAbs > 0 ? deltaAbs * (1 + Math.max(0, deltaPct)/100) : 0;
+    // Tip por tipo de segmento
+    let tipKey;
+    if(type === 'run') tipKey = 'run';
+    else if(type === 'rz') tipKey = 'rz';
+    else tipKey = item.id; // s1...s8
+    return {
+      id: item.id,
+      name: item.name,
+      sub: item.sub || '',
+      type,
+      actual,
+      target,
+      filledIn,
+      deltaAbs,
+      deltaPct: Math.round(deltaPct * 10) / 10,
+      score,
+      tip: LS_TIPS[tipKey] || '',
+    };
+  });
+
+  // Filtrar solo segmentos con datos válidos y ordenar por score descendente
+  const ranked = analysis.filter(a => a.filledIn).sort((a,b) => b.score - a.score);
+  const behind = ranked.filter(a => a.deltaAbs > 0); // los que están sobre objetivo
+  const ahead = ranked.filter(a => a.deltaAbs <= 0).length;
+
+  // Si no hay ningún segmento behind, mostrar mensaje positivo
+  if(behind.length === 0) {
+    body.innerHTML = `
+      <div class="ls-summary">
+        ✦ <strong>¡Excelente!</strong> Todos tus segmentos están en o bajo objetivo.
+        No hay segmento limitante identificado en esta carrera.
+      </div>
+      <div class="ls-empty" style="padding:14px;">${ranked.length} segmento${ranked.length===1?'':'s'} analizado${ranked.length===1?'':'s'} · todos al objetivo o mejor</div>
+    `;
+    return;
+  }
+
+  const top3 = behind.slice(0, 3);
+  const totalLost = behind.reduce((s, a) => s + a.deltaAbs, 0);
+  const top3Lost = top3.reduce((s, a) => s + a.deltaAbs, 0);
+  const top3PctOfLoss = totalLost > 0 ? Math.round((top3Lost / totalLost) * 100) : 0;
+
+  // Summary
+  let html = `<div class="ls-summary">
+    Estás <strong>+${totalLost}s sobre objetivo</strong> en ${behind.length} segmento${behind.length===1?'':'s'}.
+    Tus <strong>top 3 limitantes</strong> concentran el <strong>${top3PctOfLoss}%</strong> de esa pérdida.
+    Trabajarlos rinde más que repartir esfuerzo.
+  </div>`;
+
+  // Top 3 cards
+  html += '<div class="ls-section-title">Top 3 limitantes</div>';
+  html += '<div class="ls-top3">';
+  top3.forEach((a, idx) => {
+    const rank = idx + 1;
+    const badge = LS_TYPE_LABELS[a.type];
+    const pctOfLoss = totalLost > 0 ? Math.round((a.deltaAbs / totalLost) * 100) : 0;
+    html += `
+      <div class="ls-card rank${rank}" onclick="toggleLsTip('${a.id}')">
+        <div class="ls-rank">${rank}</div>
+        <div class="ls-card-info">
+          <div class="ls-card-name">
+            <span class="ls-card-badge ${badge.cls}">${badge.code}</span>
+            ${a.name}
+          </div>
+          <div class="ls-card-detail">
+            Real <strong>${secToMmss(a.actual)}</strong> vs objetivo <strong>${secToMmss(a.target)}</strong>
+            · ${pctOfLoss}% de tu pérdida total
+          </div>
+        </div>
+        <div class="ls-card-metrics">
+          <div class="ls-card-delta">+${a.deltaAbs}s</div>
+          <div class="ls-card-pct">+${a.deltaPct}%</div>
+        </div>
+      </div>
+      <div class="ls-tip" id="ls-tip-${a.id}">
+        <strong>💡 Cómo mejorarlo:</strong> ${a.tip}
+      </div>
+    `;
+  });
+  html += '</div>';
+
+  // Expandable full ranking
+  const hasMore = ranked.length > 3;
+  if(hasMore) {
+    html += `<button class="ls-expand-btn" onclick="toggleLsFullList(this)">▾ Ver ranking completo (${ranked.length} segmentos)</button>`;
+    html += '<div class="ls-full-list" id="ls-full-list">';
+    html += '<div class="ls-section-title">Todos los segmentos analizados</div>';
+    ranked.forEach((a, idx) => {
+      const badge = LS_TYPE_LABELS[a.type];
+      const deltaStr = (a.deltaAbs >= 0 ? '+' : '') + a.deltaAbs + 's';
+      const deltaCls = a.deltaAbs > 3 ? 'behind' : a.deltaAbs < -3 ? 'ahead' : 'neutral';
+      const pctStr = (a.deltaPct >= 0 ? '+' : '') + a.deltaPct + '%';
+      html += `
+        <div class="ls-row">
+          <span class="ls-row-rank">#${idx+1}</span>
+          <span class="ls-row-name">
+            <span class="ls-card-badge ${badge.cls}">${badge.code}</span>
+            ${a.name}
+          </span>
+          <span class="ls-row-delta ${deltaCls}">${deltaStr}</span>
+          <span class="ls-row-pct">${pctStr}</span>
+        </div>
+      `;
+    });
+    if(ahead > 0) {
+      html += `<div style="text-align:center;padding:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--station);">+ ${ahead} segmento${ahead===1?'':'s'} bajo objetivo ✓</div>`;
+    }
+    html += '</div>';
+  }
+
+  body.innerHTML = html;
+}
+
+function toggleLsTip(segId) {
+  const tip = document.getElementById('ls-tip-' + segId);
+  if(tip) tip.classList.toggle('visible');
+}
+
+function toggleLsFullList(btn) {
+  const list = document.getElementById('ls-full-list');
+  if(!list) return;
+  const isOpen = list.classList.toggle('open');
+  btn.textContent = (isOpen ? '▴ Ocultar' : '▾ Ver') + ' ranking completo (' + list.querySelectorAll('.ls-row').length + ' segmentos)';
+}
+
 </script>
 
 <!-- MODAL RACE PLAN -->
@@ -3628,6 +3871,19 @@ function _exportRacePlanImage_legacy() {
       <span class="rp-export-hint">PDF · imprimible o guardar en el teléfono</span>
       <button class="btn" onclick="closeRacePlan()">Cerrar</button>
       <button class="btn primary" onclick="exportRacePlanPDF()">⬇ Exportar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SEGMENTO LIMITANTE -->
+<div class="modal-overlay" id="limitingSegmentModal">
+  <div class="ls-modal">
+    <div class="ls-modal-head">
+      <span class="ls-modal-title">🎯 Segmento Limitante</span>
+      <button class="ls-modal-close" onclick="closeLimitingSegment()">✕</button>
+    </div>
+    <div class="ls-body" id="ls-body">
+      <!-- contenido generado dinámicamente -->
     </div>
   </div>
 </div>
