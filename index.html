@@ -165,6 +165,10 @@
   .radar-toggles[data-hidden="1"]{display:none;}
   .toggle-btn.zoom-reset{background:rgba(232,255,0,0.08);border-color:rgba(232,255,0,0.3);color:var(--accent);}
   .toggle-btn.zoom-reset:hover{background:rgba(232,255,0,0.15);}
+  .toggle-btn.zoom-ctrl{background:rgba(232,255,0,0.05);border-color:rgba(232,255,0,0.25);color:var(--accent);font-size:11px;padding:5px 9px;min-width:30px;text-align:center;font-weight:700;}
+  .toggle-btn.zoom-ctrl:hover{background:rgba(232,255,0,0.15);border-color:var(--accent);}
+  .toggle-btn.zoom-ctrl:active{transform:scale(0.92);}
+  .toggle-btn.zoom-ctrl:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
   .zoom-hint{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);letter-spacing:0.04em;margin-left:auto;opacity:0.7;}
   @media(max-width:600px){.zoom-hint{display:none;}}
   .toggle-btn{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:5px 10px;border-radius:2px;border:1px solid var(--border);background:transparent;color:var(--faint);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:5px;}
@@ -566,10 +570,10 @@
         <button class="toggle-btn" id="tg-norm" onclick="toggleRadar('norm',this)">
           <span class="dot" style="background:#e8ff00"></span> Normalizado (% objetivo)
         </button>
-        <button class="toggle-btn zoom-reset" id="tg-zoom-reset" onclick="resetRadarZoom()" style="display:none;" title="Restaurar zoom del radar">
-          🔍 Reset zoom
-        </button>
-        <span class="zoom-hint" id="zoom-hint" title="Click para zoom in · Scroll o pinch para control fino · Vuelve al máximo y reinicia">🔎 click para zoom · scroll/pinch para ajuste fino</span>
+        <button class="toggle-btn zoom-ctrl" id="tg-zoom-in" onclick="zoomRadar(1)" title="Acercar (+15%)">🔍 +</button>
+        <button class="toggle-btn zoom-ctrl" id="tg-zoom-out" onclick="zoomRadar(-1)" title="Alejar (-15%)">🔍 −</button>
+        <button class="toggle-btn zoom-reset" id="tg-zoom-reset" onclick="resetRadarZoom()" style="display:none;" title="Restaurar zoom al 100%">⟲ Reset (<span id="zoom-pct">100%</span>)</button>
+        <span class="zoom-hint" id="zoom-hint" title="Botones para tap · Scroll o pinch sobre el radar para ajuste fino">🔎 +/− para zoom · scroll/pinch sobre el radar</span>
       </div>
       <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
       <div class="legend">
@@ -2659,19 +2663,6 @@ function initRadarZoom(){
 
   wrap.addEventListener('touchend',function(){pinchDist=0;});
 
-  // Click sobre la gráfica → zoom in (un step). Al llegar al máximo, reinicia a 1.
-  wrap.addEventListener('click',function(e){
-    if(currentView!=='radar')return;
-    // Evitar conflicto con click sobre toggles u otros controles
-    if(e.target.closest('.toggle-btn')||e.target.closest('button'))return;
-    const newScale=window.radarZoomScale>=RADAR_ZOOM_MAX
-      ? 1
-      : Math.min(RADAR_ZOOM_MAX, window.radarZoomScale*RADAR_ZOOM_STEP);
-    window.radarZoomScale=newScale;
-    applyRadarZoom();
-    updateZoomBtn();
-  });
-
   window.radarZoomListenersAttached=true;
   console.log('[ZOOM] listeners successfully attached');
 }
@@ -2695,11 +2686,29 @@ function resetRadarZoom(){
   showToast('✓ Zoom restablecido');
 }
 
+// Zoom controlado por botones (+/-). dir = 1 acerca, -1 aleja.
+function zoomRadar(dir){
+  if(currentView!=='radar')return;
+  const factor=dir>0?RADAR_ZOOM_STEP:1/RADAR_ZOOM_STEP;
+  const newScale=window.radarZoomScale*factor;
+  window.radarZoomScale=Math.max(RADAR_ZOOM_MIN,Math.min(RADAR_ZOOM_MAX,newScale));
+  applyRadarZoom();
+  updateZoomBtn();
+}
+
 function updateZoomBtn(){
-  const btn=document.getElementById('tg-zoom-reset');
-  if(!btn)return;
+  const reset=document.getElementById('tg-zoom-reset');
+  const inBtn=document.getElementById('tg-zoom-in');
+  const outBtn=document.getElementById('tg-zoom-out');
+  const pct=document.getElementById('zoom-pct');
   const scale=window.radarZoomScale||1;
-  btn.style.display=(Math.abs(scale-1)>0.01)?'':'none';
+  // Botón reset solo visible cuando hay zoom aplicado
+  if(reset)reset.style.display=(Math.abs(scale-1)>0.01)?'':'none';
+  // Porcentaje actual en el botón reset
+  if(pct)pct.textContent=Math.round(scale*100)+'%';
+  // Deshabilitar botones cuando se llega al límite
+  if(inBtn)inBtn.disabled=(scale>=RADAR_ZOOM_MAX-0.001);
+  if(outBtn)outBtn.disabled=(scale<=RADAR_ZOOM_MIN+0.001);
 }
 
 // Inicializar zoom cuando carga el DOM
