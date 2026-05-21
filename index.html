@@ -16,6 +16,7 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -559,7 +560,7 @@
         <button class="chart-tab" onclick="setView('pie',this)">Distribución</button>
       </div></div>
       <div class="radar-toggles" id="radar-toggles">
-        <button class="toggle-btn active" id="tg-rox" onclick="toggleRadar('rox',this)">
+        <button class="toggle-btn" id="tg-rox" onclick="toggleRadar('rox',this)">
           <span class="dot" style="background:#ff9f43"></span> Mostrar Roxzones
         </button>
         <button class="toggle-btn" id="tg-norm" onclick="toggleRadar('norm',this)">
@@ -568,7 +569,7 @@
         <button class="toggle-btn zoom-reset" id="tg-zoom-reset" onclick="resetRadarZoom()" style="display:none;" title="Restaurar zoom del radar">
           🔍 Reset zoom
         </button>
-        <span class="zoom-hint" id="zoom-hint" title="Zoom in: scroll arriba o pellizco abriendo dedos · Zoom out: scroll abajo o pellizco cerrando">🔎 zoom: scroll / pinch sobre la gráfica</span>
+        <span class="zoom-hint" id="zoom-hint" title="Click para zoom in · Scroll o pinch para control fino · Vuelve al máximo y reinicia">🔎 click para zoom · scroll/pinch para ajuste fino</span>
       </div>
       <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
       <div class="legend">
@@ -831,7 +832,7 @@ const PRESET_TARGETS={
 };
 
 let currentPreset=75, chartInstance=null, compareChartInstance=null, currentView='radar';
-let radarShowRoxzones=true, radarNormalized=false;
+let radarShowRoxzones=false, radarNormalized=false;
 let pendingFile=null, openCards={};
 
 // ── STORAGE ───────────────────────────────────────────────
@@ -2658,6 +2659,19 @@ function initRadarZoom(){
 
   wrap.addEventListener('touchend',function(){pinchDist=0;});
 
+  // Click sobre la gráfica → zoom in (un step). Al llegar al máximo, reinicia a 1.
+  wrap.addEventListener('click',function(e){
+    if(currentView!=='radar')return;
+    // Evitar conflicto con click sobre toggles u otros controles
+    if(e.target.closest('.toggle-btn')||e.target.closest('button'))return;
+    const newScale=window.radarZoomScale>=RADAR_ZOOM_MAX
+      ? 1
+      : Math.min(RADAR_ZOOM_MAX, window.radarZoomScale*RADAR_ZOOM_STEP);
+    window.radarZoomScale=newScale;
+    applyRadarZoom();
+    updateZoomBtn();
+  });
+
   window.radarZoomListenersAttached=true;
   console.log('[ZOOM] listeners successfully attached');
 }
@@ -3302,7 +3316,178 @@ document.addEventListener('input', e => {
   if(e.target && e.target.id === 'rp-tol') buildRacePlanTable();
 });
 
-function exportRacePlanImage() {
+function exportRacePlanPDF() {
+  if(typeof window.jspdf==='undefined'){
+    showToast('jsPDF no cargado — revisa tu conexión',true);
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+
+  const tgt = getCurrentTargetSec();
+  const effTargets = getEffectiveTargets();
+  const tolSec = parseInt(document.getElementById('rp-tol') ? document.getElementById('rp-tol').value : 10) || 10;
+  const factors = getRpRunFactors(rpStrategy);
+  const baseRunTotal = effTargets.runs.reduce((a,b) => a+b, 0);
+  const factorSum = factors.reduce((a,b) => a+b, 0);
+  const planRuns = factors.map(f => Math.round((baseRunTotal / factorSum) * f));
+  const planStations = effTargets.stations;
+  const planRoxzones = effTargets.roxzones;
+
+  const segments = [];
+  for(let i = 0; i < 8; i++) {
+    segments.push({ type:'run', idx:i, name:'Run ' + (i+1), sec: planRuns[i] });
+    if(i < 7) segments.push({ type:'rz', idx:i, name:'Roxzone ' + (i+1), sec: planRoxzones[i] });
+    segments.push({ type:'station', idx:i, name: STATIONS[i].name, sec: planStations[i] });
+  }
+
+  // PDF en A4 vertical (210 × 297 mm), unidades en mm
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+  const PW = 210, MARGIN = 12;
+
+  // Paleta (RGB para jsPDF)
+  const ACC = [232,255,0], RUN = [77,159,255], STA = [153,255,102], ROX = [181,181,176];
+  const TEXT = [40,40,40], MUTED = [120,120,120], FAINT = [160,160,160], BORDER = [220,220,220];
+  const BG_ROW = [250,250,250];
+
+  // ── HEADER ──
+  doc.setFillColor(20,20,22);
+  doc.rect(0, 0, PW, 28, 'F');
+  doc.setFillColor(...ACC);
+  doc.rect(0, 28, PW, 1.2, 'F');
+
+  doc.setTextColor(...ACC);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.text('HYROX / RACE PLAN', MARGIN, 14);
+
+  doc.setTextColor(200,200,200);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10);
+  const stratLabels = { flat:'Plano', conservative:'Conservador', aggressive:'Agresivo', negative:'Negativo' };
+  doc.text('Objetivo: ' + secToHmmss(tgt) + '   |   Estrategia: ' + stratLabels[rpStrategy] + '   |   Tolerancia: ±' + tolSec + 's', MARGIN, 22);
+
+  // Fecha (esquina derecha)
+  doc.setFontSize(8);
+  doc.setTextColor(160,160,160);
+  const now = new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+  doc.text('Generado: ' + now, PW - MARGIN, 14, { align:'right' });
+
+  // ── COLUMN HEADERS ──
+  let y = 38;
+  doc.setTextColor(...FAINT);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(8);
+  doc.text('SEGMENTO', MARGIN, y);
+  doc.text('OBJETIVO', 110, y, { align:'right' });
+  doc.text('VENTANA', 145, y, { align:'right' });
+  doc.text('ACUMULADO', 195, y, { align:'right' });
+  doc.setDrawColor(...BORDER);
+  doc.setLineWidth(0.2);
+  doc.line(MARGIN, y + 1.5, PW - MARGIN, y + 1.5);
+  y += 5;
+
+  // ── ROWS ──
+  let accum = 0;
+  const ROW_H = 7;
+  segments.forEach((seg, ri) => {
+    accum += seg.sec;
+    const tc = seg.type === 'run' ? RUN : seg.type === 'station' ? STA : ROX;
+
+    // Background alternado
+    if(ri % 2 === 0){
+      doc.setFillColor(...BG_ROW);
+      doc.rect(MARGIN - 1, y - 4, PW - MARGIN*2 + 2, ROW_H, 'F');
+    }
+    // Barra de color a la izquierda
+    doc.setFillColor(...tc);
+    doc.rect(MARGIN - 1, y - 4, 1.2, ROW_H, 'F');
+
+    // Badge (rect pequeño con texto)
+    const badgeText = seg.type === 'run' ? 'RUN' : seg.type === 'station' ? 'WS' : 'RZ';
+    doc.setFillColor(tc[0], tc[1], tc[2]);
+    doc.setGState && doc.setGState(new doc.GState({ opacity: 0.18 }));
+    doc.rect(MARGIN + 1.5, y - 3, 8.5, 4.5, 'F');
+    doc.setGState && doc.setGState(new doc.GState({ opacity: 1 }));
+    doc.setTextColor(...tc);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(6.5);
+    doc.text(badgeText, MARGIN + 5.7, y, { align:'center' });
+
+    // Nombre del segmento
+    doc.setTextColor(...TEXT);
+    doc.setFont('helvetica', seg.type === 'rz' ? 'normal' : 'bold');
+    doc.setFontSize(seg.type === 'rz' ? 9 : 10);
+    doc.text(seg.name, MARGIN + 13, y);
+
+    // Objetivo
+    doc.setTextColor(...TEXT);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(secToMmss(seg.sec), 110, y, { align:'right' });
+
+    // Ventana
+    doc.setTextColor(...MUTED);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(8.5);
+    doc.text(secToMmss(seg.sec - tolSec) + '–' + secToMmss(seg.sec + tolSec), 145, y, { align:'right' });
+
+    // Acumulado
+    doc.setTextColor(40,40,40);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.text(secToHmmss(accum), 195, y, { align:'right' });
+
+    y += ROW_H;
+  });
+
+  // ── TOTAL ──
+  y += 2;
+  doc.setDrawColor(...BORDER);
+  doc.line(MARGIN, y - 3, PW - MARGIN, y - 3);
+  doc.setFillColor(245,245,235);
+  doc.rect(MARGIN - 1, y - 3, PW - MARGIN*2 + 2, 9, 'F');
+  doc.setTextColor(40,40,40);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(12);
+  doc.text('TOTAL', MARGIN + 2, y + 3);
+  doc.setTextColor(40,40,40);
+  doc.text(secToHmmss(accum), 195, y + 3, { align:'right' });
+
+  // Desglose
+  y += 11;
+  const rT = planRuns.reduce((a,b)=>a+b,0);
+  const sT = planStations.reduce((a,b)=>a+b,0);
+  const zT = planRoxzones.reduce((a,b)=>a+b,0);
+  doc.setTextColor(...MUTED);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(8.5);
+  doc.text('Running ' + secToMmss(rT) + '  ·  Estaciones ' + secToMmss(sT) + '  ·  Roxzones ' + secToMmss(zT), MARGIN, y);
+
+  // ── STRATEGY DESCRIPTION BOX ──
+  y += 10;
+  const desc = RP_STRAT_DESC[rpStrategy] || '';
+  doc.setDrawColor(...ACC);
+  doc.setFillColor(252,252,235);
+  doc.rect(MARGIN, y, PW - MARGIN*2, 14, 'FD');
+  doc.setTextColor(80,80,80);
+  doc.setFont('helvetica','italic');
+  doc.setFontSize(8.5);
+  const wrapped = doc.splitTextToSize(desc, PW - MARGIN*2 - 6);
+  doc.text(wrapped, MARGIN + 3, y + 5);
+
+  // ── FOOTER ──
+  doc.setTextColor(...FAINT);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.text('Hyrox Performance Tracker · hyrox-tracker.github.io', MARGIN, 285);
+  doc.text('Página 1', PW - MARGIN, 285, { align:'right' });
+
+  // Save
+  doc.save('hyrox_race_plan_' + rpStrategy + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+  showToast('✓ Race plan exportado como PDF');
+}
+
+function _exportRacePlanImage_legacy() {
   const tgt = getCurrentTargetSec();
   const effTargets = getEffectiveTargets();
   const tolSec = parseInt(document.getElementById('rp-tol') ? document.getElementById('rp-tol').value : 10) || 10;
@@ -3431,9 +3616,9 @@ function exportRacePlanImage() {
       </table>
     </div>
     <div class="rp-footer">
-      <span class="rp-export-hint">PNG · imprimible o guardar en el teléfono</span>
+      <span class="rp-export-hint">PDF · imprimible o guardar en el teléfono</span>
       <button class="btn" onclick="closeRacePlan()">Cerrar</button>
-      <button class="btn primary" onclick="exportRacePlanImage()">⬇ Exportar imagen</button>
+      <button class="btn primary" onclick="exportRacePlanPDF()">⬇ Exportar PDF</button>
     </div>
   </div>
 </div>
