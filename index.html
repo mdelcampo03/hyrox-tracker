@@ -375,6 +375,47 @@
   .garmin-btn:hover{border-color:#00c864;background:rgba(0,196,100,0.18);}
   .garmin-btn svg{width:13px;height:13px;flex-shrink:0;}
   @media(max-width:720px){.garmin-strip{grid-template-columns:1fr;}.gs-arrow{display:none;}}
+  /* ── RACE PLAN MODAL ── */
+  .rp-modal{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--accent);border-radius:0 0 2px 2px;padding:0;width:min(680px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+  .rp-modal-head{padding:18px 24px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--surface2);}
+  .rp-modal-title{font-family:'Archivo Black',sans-serif;font-size:1.2rem;letter-spacing:-0.02em;text-transform:uppercase;color:var(--accent);flex:1;}
+  .rp-modal-close{background:transparent;border:none;color:var(--faint);font-size:1.2rem;cursor:pointer;padding:4px 8px;border-radius:2px;transition:color .15s;}
+  .rp-modal-close:hover{color:var(--err);}
+  .rp-config{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;flex-shrink:0;background:var(--surface);}
+  .rp-config-group{display:flex;flex-direction:column;gap:5px;}
+  .rp-config-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);}
+  .rp-strategy-row{display:flex;gap:4px;flex-wrap:wrap;}
+  .rp-strat-btn{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 12px;border-radius:2px;border:1px solid var(--border);background:transparent;color:var(--faint);cursor:pointer;transition:all .15s;white-space:nowrap;}
+  .rp-strat-btn:hover{border-color:var(--accent);color:var(--text);}
+  .rp-strat-btn.active{background:var(--accent);color:#000;border-color:var(--accent);}
+  .rp-tol-wrap{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:2px;padding:4px 8px;background:var(--surface2);height:32px;}
+  .rp-tol-wrap:hover{border-color:var(--accent);}
+  .rp-tol-wrap input{width:36px;background:transparent;border:none;color:var(--accent);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;text-align:center;outline:none;-moz-appearance:textfield;}
+  .rp-tol-wrap input::-webkit-outer-spin-button,.rp-tol-wrap input::-webkit-inner-spin-button{-webkit-appearance:none;}
+  .rp-tol-unit{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);}
+  .rp-obj-wrap{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(232,255,0,0.3);border-radius:2px;padding:4px 10px;background:rgba(232,255,0,0.05);height:32px;}
+  .rp-obj-val{font-family:'Archivo Black',sans-serif;font-size:1rem;color:var(--accent);letter-spacing:-0.02em;}
+  .rp-obj-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);}
+  .rp-body{overflow-y:auto;flex:1;padding:16px 24px 20px;}
+  .rp-table{width:100%;border-collapse:collapse;}
+  .rp-table th{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);padding:6px 8px;border-bottom:1px solid var(--border);text-align:right;}
+  .rp-table th:first-child{text-align:left;}
+  .rp-table td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.03);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);text-align:right;vertical-align:middle;}
+  .rp-table td:first-child{text-align:left;}
+  .rp-table tr.rp-run td{color:var(--run);}
+  .rp-table tr.rp-station td{color:var(--station);}
+  .rp-table tr.rp-rz td{color:var(--roxzone);font-size:10px;}
+  .rp-table tr.rp-total td{border-top:1px solid var(--border);color:var(--accent);font-weight:700;}
+  .rp-seg-name{display:flex;align-items:center;gap:7px;}
+  .rp-seg-badge{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;letter-spacing:0.1em;padding:1px 5px;border-radius:2px;flex-shrink:0;}
+  .rp-seg-badge.run{background:rgba(77,159,255,0.15);color:var(--run);}
+  .rp-seg-badge.ws{background:rgba(153,255,102,0.1);color:var(--station);}
+  .rp-seg-badge.rz{background:rgba(181,181,176,0.1);color:var(--roxzone);}
+  .rp-seg-sub{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);}
+  .rp-tol-cell{font-size:9px;color:var(--faint);}
+  .rp-footer{padding:12px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-shrink:0;background:var(--surface2);}
+  .rp-export-hint{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);margin-right:auto;}
+
 </style>
 </head>
 <body>
@@ -471,6 +512,7 @@
   </div>
   <span class="target-label">→ <span class="target-display" id="tgt-display">1:15:00</span></span>
   <div class="target-gap neutral" id="tgt-gap">— sin datos</div>
+  <button class="btn" style="margin-left:8px;border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="openRacePlan()" title="Generar plan de carrera basado en el objetivo actual">🗓 Race Plan</button>
 </div>
 
 <div class="main-tabs">
@@ -3158,6 +3200,242 @@ window.addEventListener('load',()=>{
     }
   },800);
 });
+
+// ── RACE PLAN ─────────────────────────────────────────────────────────────────
+let rpStrategy = 'flat';
+
+const RP_STRAT_DESC = {
+  flat:         '= Plano — Todos los runs al mismo ritmo. Máxima consistencia, requiere control de esfuerzo desde el inicio.',
+  conservative: '↗ Conservador — Empiezas 8–10% más lento y aceleras en la segunda mitad. Menor riesgo de fundirte al final.',
+  aggressive:   '⚡ Agresivo — Salida fuerte, runs 1–4 un 6% más rápidos. Alto riesgo si no tienes el nivel, alta recompensa si lo tienes.',
+  negative:     '↘ Negativo — Cada run progresivamente más rápido. El split ideal según la fisiología; difícil de ejecutar en Hyrox.',
+};
+
+function getRpRunFactors(strategy) {
+  switch(strategy) {
+    case 'conservative': return [1.10, 1.07, 1.04, 1.01, 0.99, 0.97, 0.95, 0.94];
+    case 'aggressive':   return [0.94, 0.95, 0.97, 0.99, 1.01, 1.03, 1.05, 1.06];
+    case 'negative':     return [1.08, 1.06, 1.04, 1.02, 0.98, 0.96, 0.94, 0.92];
+    default:             return [1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0,  1.0];
+  }
+}
+
+function openRacePlan() {
+  const tgtSec = getCurrentTargetSec();
+  const tgtEl = document.getElementById('rp-obj-val');
+  if(tgtEl) tgtEl.textContent = secToHmmss(tgtSec);
+  document.querySelectorAll('.rp-strat-btn').forEach(b => b.classList.remove('active'));
+  const ab = document.querySelector('.rp-strat-btn[data-strat="' + rpStrategy + '"]');
+  if(ab) ab.classList.add('active');
+  document.getElementById('racePlanModal').classList.add('open');
+  buildRacePlanTable();
+}
+
+function closeRacePlan() {
+  document.getElementById('racePlanModal').classList.remove('open');
+}
+
+function setRpStrategy(strat, btn) {
+  rpStrategy = strat;
+  document.querySelectorAll('.rp-strat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildRacePlanTable();
+}
+
+document.addEventListener('click', e => {
+  const modal = document.getElementById('racePlanModal');
+  if(e.target === modal) closeRacePlan();
+});
+
+function buildRacePlanTable() {
+  const tbody = document.getElementById('rp-tbody');
+  const descEl = document.getElementById('rp-strat-desc');
+  if(!tbody) return;
+  if(descEl) descEl.textContent = RP_STRAT_DESC[rpStrategy] || '';
+
+  const effTargets = getEffectiveTargets();
+  const tolSec = parseInt(document.getElementById('rp-tol') ? document.getElementById('rp-tol').value : 10) || 10;
+  const factors = getRpRunFactors(rpStrategy);
+  const baseRunTotal = effTargets.runs.reduce((a,b) => a+b, 0);
+  const factorSum = factors.reduce((a,b) => a+b, 0);
+  const planRuns = factors.map(f => Math.round((baseRunTotal / factorSum) * f));
+  const planStations = effTargets.stations;
+  const planRoxzones = effTargets.roxzones;
+
+  const segments = [];
+  for(let i = 0; i < 8; i++) {
+    segments.push({ type:'run', idx:i, name:'Run ' + (i+1), sec: planRuns[i] });
+    if(i < 7) segments.push({ type:'rz', idx:i, name:'Roxzone ' + (i+1), sub: ROXZONES[i].sub, sec: planRoxzones[i] });
+    segments.push({ type:'station', idx:i, name: STATIONS[i].name, sub: STATIONS[i].sub, sec: planStations[i] });
+  }
+
+  let accum = 0;
+  let rows = '';
+  segments.forEach(seg => {
+    accum += seg.sec;
+    const badgeCls = seg.type === 'run' ? 'run' : seg.type === 'station' ? 'ws' : 'rz';
+    const badgeTxt = seg.type === 'run' ? 'RUN' : seg.type === 'station' ? 'WS' : 'RZ';
+    const trCls = seg.type === 'run' ? 'rp-run' : seg.type === 'station' ? 'rp-station' : 'rp-rz';
+    const tolStr = secToMmss(seg.sec - tolSec) + ' – ' + secToMmss(seg.sec + tolSec);
+    rows += '<tr class="' + trCls + '">' +
+      '<td><div class="rp-seg-name">' +
+        '<span class="rp-seg-badge ' + badgeCls + '">' + badgeTxt + '</span>' +
+        '<span>' + seg.name + '</span>' +
+        '<span class="rp-seg-sub">' + (seg.sub || '') + '</span>' +
+      '</div></td>' +
+      '<td style="font-weight:700;">' + secToMmss(seg.sec) + '</td>' +
+      '<td class="rp-tol-cell">' + tolStr + '</td>' +
+      '<td style="color:var(--accent);font-weight:700;">' + secToHmmss(accum) + '</td>' +
+    '</tr>';
+  });
+
+  const runTotal = planRuns.reduce((a,b) => a+b, 0);
+  const stTotal = planStations.reduce((a,b) => a+b, 0);
+  const rzTotal = planRoxzones.reduce((a,b) => a+b, 0);
+  rows += '<tr class="rp-total"><td colspan="3">TOTAL</td><td>' + secToHmmss(runTotal + stTotal + rzTotal) + '</td></tr>';
+  rows += '<tr><td colspan="4" style="font-size:9px;color:var(--faint);padding-top:4px;">Running ' + secToMmss(runTotal) + '  ·  Estaciones ' + secToMmss(stTotal) + '  ·  Roxzones ' + secToMmss(rzTotal) + '</td></tr>';
+
+  tbody.innerHTML = rows;
+}
+
+document.addEventListener('input', e => {
+  if(e.target && e.target.id === 'rp-tol') buildRacePlanTable();
+});
+
+function exportRacePlanImage() {
+  const tgt = getCurrentTargetSec();
+  const effTargets = getEffectiveTargets();
+  const tolSec = parseInt(document.getElementById('rp-tol') ? document.getElementById('rp-tol').value : 10) || 10;
+  const factors = getRpRunFactors(rpStrategy);
+  const baseRunTotal = effTargets.runs.reduce((a,b) => a+b, 0);
+  const factorSum = factors.reduce((a,b) => a+b, 0);
+  const planRuns = factors.map(f => Math.round((baseRunTotal / factorSum) * f));
+  const planStations = effTargets.stations;
+  const planRoxzones = effTargets.roxzones;
+
+  const segments = [];
+  for(let i = 0; i < 8; i++) {
+    segments.push({ type:'run', idx:i, name:'Run ' + (i+1), sec: planRuns[i] });
+    if(i < 7) segments.push({ type:'rz', idx:i, name:'Roxzone ' + (i+1), sec: planRoxzones[i] });
+    segments.push({ type:'station', idx:i, name: STATIONS[i].name, sec: planStations[i] });
+  }
+
+  const ROW_H = 26, HEADER_H = 96, FOOTER_H = 36, W = 580;
+  const H = HEADER_H + segments.length * ROW_H + ROW_H * 2 + FOOTER_H;
+  const canvas = document.createElement('canvas');
+  const dpr = window.devicePixelRatio || 2;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const c = canvas.getContext('2d');
+  c.scale(dpr, dpr);
+
+  const BG='#0a0a0b',SURF='#131316',SURF2='#1c1c20',ACC='#e8ff00',RUN='#4d9fff',STA='#99ff66',ROX='#b5b5b0',TEXT='#f5f5f4',MUTED='#a1a1a1',FAINT='#6b6b6b',BORDER='#2a2a30';
+
+  c.fillStyle=BG; c.fillRect(0,0,W,H);
+  c.fillStyle=SURF2; c.fillRect(0,0,W,HEADER_H);
+  c.strokeStyle=ACC; c.lineWidth=2; c.beginPath(); c.moveTo(0,HEADER_H); c.lineTo(W,HEADER_H); c.stroke();
+
+  c.fillStyle=ACC; c.font='bold 20px Arial, sans-serif'; c.fillText('HYROX / RACE PLAN',20,30);
+  c.fillStyle=MUTED; c.font='11px monospace';
+  const stratLabels={flat:'= Plano',conservative:'↗ Conservador',aggressive:'⚡ Agresivo',negative:'↘ Negativo'};
+  c.fillText('Objetivo: ' + secToHmmss(tgt) + '  ·  Estrategia: ' + stratLabels[rpStrategy] + '  ·  Tolerancia: ±' + tolSec + 's', 20, 52);
+  c.fillStyle=FAINT; c.font='9px monospace';
+  c.fillText('Generado: ' + new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}), 20, 70);
+  c.fillStyle=FAINT; c.font='bold 9px monospace';
+  ['SEGMENTO','OBJETIVO','VENTANA','ACUMULADO'].forEach((h,i) => {
+    c.fillText(h, [20,252,344,462][i], 86);
+  });
+
+  let accum=0;
+  segments.forEach((seg,ri) => {
+    accum += seg.sec;
+    const y = HEADER_H + ri * ROW_H;
+    const tc = seg.type==='run'?RUN : seg.type==='station'?STA : ROX;
+    c.fillStyle = ri%2===0?SURF:BG; c.fillRect(0,y,W,ROW_H);
+    c.fillStyle = tc; c.fillRect(0,y,3,ROW_H);
+    const bt = seg.type==='run'?'RUN' : seg.type==='station'?'WS' : 'RZ';
+    c.fillStyle = tc+'28'; c.beginPath(); c.roundRect(8,y+5,28,16,2); c.fill();
+    c.fillStyle=tc; c.font='bold 8px monospace'; c.fillText(bt,11,y+16);
+    c.fillStyle=tc; c.font=seg.type==='rz'?'10px monospace':'bold 11px monospace'; c.fillText(seg.name,42,y+17);
+    c.fillStyle=TEXT; c.font='bold 12px monospace'; c.fillText(secToMmss(seg.sec),252,y+17);
+    c.fillStyle=FAINT; c.font='10px monospace'; c.fillText(secToMmss(seg.sec-tolSec)+'-'+secToMmss(seg.sec+tolSec),344,y+17);
+    c.fillStyle=ACC; c.font='bold 12px monospace'; c.fillText(secToHmmss(accum),462,y+17);
+  });
+
+  const totY=HEADER_H+segments.length*ROW_H;
+  c.strokeStyle=BORDER; c.lineWidth=1; c.beginPath(); c.moveTo(0,totY); c.lineTo(W,totY); c.stroke();
+  c.fillStyle=SURF2; c.fillRect(0,totY,W,ROW_H);
+  c.fillStyle=ACC; c.font='bold 13px monospace'; c.fillText('TOTAL',20,totY+17); c.fillText(secToHmmss(accum),462,totY+17);
+  const rT=planRuns.reduce((a,b)=>a+b,0),sT=planStations.reduce((a,b)=>a+b,0),zT=planRoxzones.reduce((a,b)=>a+b,0);
+  c.fillStyle=SURF; c.fillRect(0,totY+ROW_H,W,ROW_H);
+  c.fillStyle=FAINT; c.font='9px monospace'; c.fillText('Running '+secToMmss(rT)+'  ·  Estaciones '+secToMmss(sT)+'  ·  Roxzones '+secToMmss(zT),20,totY+ROW_H+16);
+
+  const footY=totY+ROW_H*2;
+  c.fillStyle=SURF2; c.fillRect(0,footY,W,FOOTER_H);
+  c.strokeStyle=BORDER; c.lineWidth=1; c.beginPath(); c.moveTo(0,footY); c.lineTo(W,footY); c.stroke();
+  c.fillStyle=FAINT; c.font='9px monospace'; c.fillText('Hyrox Performance Tracker · hyrox-tracker.github.io',20,footY+22);
+
+  const link=document.createElement('a');
+  link.download='hyrox_race_plan_'+rpStrategy+'_'+new Date().toISOString().slice(0,10)+'.png';
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+  showToast('✓ Race plan exportado como imagen');
+}
+
 </script>
+
+<!-- MODAL RACE PLAN -->
+<div class="modal-overlay" id="racePlanModal">
+  <div class="rp-modal">
+    <div class="rp-modal-head">
+      <span class="rp-modal-title">🗓 Race Plan</span>
+      <button class="rp-modal-close" onclick="closeRacePlan()">✕</button>
+    </div>
+    <div class="rp-config">
+      <div class="rp-config-group">
+        <span class="rp-config-label">Objetivo</span>
+        <div class="rp-obj-wrap">
+          <span class="rp-obj-val" id="rp-obj-val">1:15:00</span>
+          <span class="rp-obj-label">objetivo activo</span>
+        </div>
+      </div>
+      <div class="rp-config-group" style="flex:1;min-width:220px;">
+        <span class="rp-config-label">Estrategia de ritmo</span>
+        <div class="rp-strategy-row">
+          <button class="rp-strat-btn active" data-strat="flat" onclick="setRpStrategy('flat',this)">= Plano</button>
+          <button class="rp-strat-btn" data-strat="conservative" onclick="setRpStrategy('conservative',this)">↗ Conservador</button>
+          <button class="rp-strat-btn" data-strat="aggressive" onclick="setRpStrategy('aggressive',this)">⚡ Agresivo</button>
+          <button class="rp-strat-btn" data-strat="negative" onclick="setRpStrategy('negative',this)">↘ Negativo</button>
+        </div>
+      </div>
+      <div class="rp-config-group">
+        <span class="rp-config-label">Tolerancia</span>
+        <div class="rp-tol-wrap">
+          <span class="rp-tol-unit">±</span>
+          <input type="number" id="rp-tol" min="3" max="60" value="10">
+          <span class="rp-tol-unit">seg</span>
+        </div>
+      </div>
+    </div>
+    <div class="rp-body">
+      <div id="rp-strat-desc" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:12px;padding:8px 10px;background:var(--surface2);border-radius:2px;border-left:2px solid var(--accent);"></div>
+      <table class="rp-table" id="rp-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Segmento</th>
+            <th>Objetivo</th>
+            <th>Ventana</th>
+            <th>Acumulado</th>
+          </tr>
+        </thead>
+        <tbody id="rp-tbody"></tbody>
+      </table>
+    </div>
+    <div class="rp-footer">
+      <span class="rp-export-hint">PNG · imprimible o guardar en el teléfono</span>
+      <button class="btn" onclick="closeRacePlan()">Cerrar</button>
+      <button class="btn primary" onclick="exportRacePlanImage()">⬇ Exportar imagen</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
