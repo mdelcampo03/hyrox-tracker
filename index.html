@@ -178,6 +178,40 @@
   .pace-bar{height:3px;background:var(--surface3);border-radius:0;overflow:hidden;display:flex;gap:1px;}
   .pace-seg{height:100%;transition:flex .5s ease;min-width:0;}
 
+  /* ── DEGRADATION PANEL ── */
+  .deg-panel{background:var(--surface);border:1px solid var(--border);border-radius:2px;padding:0;overflow:hidden;}
+  .deg-header{padding:10px 14px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);background:var(--surface2);}
+  .deg-title{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);flex:1;}
+  .deg-badge{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.08em;padding:2px 7px;border-radius:2px;}
+  .deg-badge.stable{background:rgba(153,255,102,0.1);color:var(--station);}
+  .deg-badge.moderate{background:rgba(255,184,77,0.1);color:var(--warn);}
+  .deg-badge.severe{background:rgba(255,77,106,0.1);color:var(--err);}
+  .deg-badge.nodata{background:rgba(107,107,107,0.15);color:var(--faint);}
+  .deg-body{padding:14px;}
+  .deg-chart-wrap{position:relative;height:130px;margin-bottom:12px;}
+  .deg-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:12px;}
+  .deg-stat{background:var(--surface2);padding:9px 10px;}
+  .deg-stat-label{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px;}
+  .deg-stat-val{font-family:'Archivo Black',sans-serif;font-size:1.1rem;line-height:1;letter-spacing:-0.02em;}
+  .deg-stat-val.positive{color:var(--err);}
+  .deg-stat-val.negative{color:var(--station);}
+  .deg-stat-val.neutral{color:var(--faint);}
+  .deg-run-row{display:grid;grid-template-columns:52px 1fr 44px 44px;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
+  .deg-run-row:last-child{border-bottom:none;}
+  .deg-run-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);}
+  .deg-run-bar-wrap{position:relative;height:14px;background:var(--surface3);border-radius:1px;overflow:hidden;}
+  .deg-run-bar{height:100%;border-radius:1px;transition:width .4s ease;}
+  .deg-run-time{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;text-align:right;}
+  .deg-run-delta{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;text-align:right;}
+  .deg-run-delta.ahead{color:var(--station);}
+  .deg-run-delta.behind{color:var(--err);}
+  .deg-run-delta.neutral{color:var(--faint);}
+  .deg-run-row.best .deg-run-label{color:var(--station);}
+  .deg-run-row.worst .deg-run-label{color:var(--err);}
+  .deg-section-label{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);margin:10px 0 6px;display:flex;align-items:center;gap:8px;}
+  .deg-section-label::after{content:"";flex:1;height:1px;background:var(--border);}
+  .deg-nodata{padding:20px 14px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);line-height:1.8;}
+
   /* ── INPUT PANEL ── */
   .input-panel{overflow-y:auto;max-height:calc(100vh - 200px);scrollbar-width:thin;scrollbar-color:var(--surface3) transparent;}
   .input-panel::-webkit-scrollbar{width:3px;}.input-panel::-webkit-scrollbar-thumb{background:var(--border);}
@@ -507,6 +541,17 @@
           <div class="pace-seg" id="seg-run" style="background:var(--run);flex:0"></div>
           <div class="pace-seg" id="seg-station" style="background:var(--station);flex:0"></div>
           <div class="pace-seg" id="seg-roxzone" style="background:#ff9f43;flex:0"></div>
+        </div>
+      </div>
+
+      <!-- PANEL DE DEGRADACIÓN DE RUNS -->
+      <div class="deg-panel" id="deg-panel">
+        <div class="deg-header">
+          <span class="deg-title">⚡ Degradación de Runs</span>
+          <span class="deg-badge nodata" id="deg-badge">Sin datos</span>
+        </div>
+        <div id="deg-body">
+          <div class="deg-nodata">Carga una carrera para ver el análisis de degradación</div>
         </div>
       </div>
     </div>
@@ -1668,6 +1713,139 @@ function buildRow(item,container,type){
     });
   });
 }
+// ── ANÁLISIS DE DEGRADACIÓN DE RUNS ──────────────────────────────────────────
+// Muestra: degradación en seg y %, vs objetivo por run, mejor/peor run destacados
+// y comparación contra promedio histórico
+async function renderDegradationPanel(currentRuns){
+  const body=document.getElementById('deg-body');
+  const badge=document.getElementById('deg-badge');
+  if(!body||!badge)return;
+
+  const hasData=currentRuns&&currentRuns.some(v=>v>0);
+
+  // Cargar histórico para tendencia
+  const history=await loadHistory();
+  const validHistory=history.filter(r=>
+    Array.isArray(r.runs)&&r.runs.length===8&&r.runs.every(v=>v>0)
+  );
+
+  if(!hasData){
+    badge.className='deg-badge nodata';badge.textContent='Sin datos';
+    body.innerHTML='<div class="deg-nodata">Carga una carrera para ver<br>el análisis de degradación de runs</div>';
+    return;
+  }
+
+  // ── Calcular métricas de la carrera actual ──
+  const validRuns=currentRuns.filter(v=>v>0);
+  const firstRun=currentRuns[0]||0;
+  const lastRun=currentRuns[currentRuns.length-1]||0;
+  const minRun=Math.min(...validRuns);
+  const maxRun=Math.max(...validRuns);
+  const bestIdx=currentRuns.indexOf(minRun);
+  const worstIdx=currentRuns.indexOf(maxRun);
+  const avgRun=Math.round(validRuns.reduce((a,b)=>a+b,0)/validRuns.length);
+  // Degradación entre primer y último run
+  const degradSec=lastRun-firstRun;
+  const degradPct=firstRun>0?Math.round((degradSec/firstRun)*100):0;
+  // Tendencia lineal (regresión simple)
+  const nv=validRuns.length;
+  const xMean=(nv-1)/2;
+  let num=0,den=0;
+  validRuns.forEach((v,i)=>{num+=(i-xMean)*(v-avgRun);den+=(i-xMean)*(i-xMean);});
+  const slope=den!==0?num/den:0;
+
+  // ── Badge de severidad ──
+  const absPct=Math.abs(degradPct);
+  let severity,severityLabel;
+  if(absPct<=3){severity='stable';severityLabel='Estable';}
+  else if(absPct<=8){severity='moderate';severityLabel='Moderada';}
+  else{severity='severe';severityLabel='Severa';}
+  if(degradSec<-3){severityLabel='Negativa ✦';}
+  badge.className='deg-badge '+severity;
+  badge.textContent=severityLabel;
+
+  // ── Promedio histórico de cada run ──
+  let histAvgRuns=null;
+  if(validHistory.length>=2){
+    histAvgRuns=Array(8).fill(0).map((_,i)=>{
+      const vals=validHistory.map(r=>r.runs[i]).filter(v=>v>0);
+      return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0;
+    });
+  }
+
+  // ── Objetivo efectivo para runs ──
+  const effTargets=getEffectiveTargets();
+  const maxBarVal=Math.max(...currentRuns.filter(v=>v>0),1);
+
+  // Stats row
+  const degradSign=degradSec>=0?'+':'';
+  const slopePct=avgRun>0?(Math.round((slope/avgRun)*1000)/10):0;
+  let html='';
+  html+='<div class="deg-body">';
+  html+=`<div class="deg-stats">
+    <div class="deg-stat">
+      <div class="deg-stat-label">1° vs Último</div>
+      <div class="deg-stat-val ${degradSec>3?'positive':degradSec<-3?'negative':'neutral'}">${degradSign}${degradSec}s</div>
+    </div>
+    <div class="deg-stat">
+      <div class="deg-stat-label">Variación total</div>
+      <div class="deg-stat-val ${absPct>5?'positive':'neutral'}">${degradSign}${degradPct}%</div>
+    </div>
+    <div class="deg-stat">
+      <div class="deg-stat-label">Tendencia/km</div>
+      <div class="deg-stat-val ${slope>2?'positive':slope<-2?'negative':'neutral'}">${slope>=0?'+':''}${slopePct}s</div>
+    </div>
+  </div>`;
+
+  // Tabla de runs con mini barras
+  html+='<div class="deg-section-label">Splits individuales vs objetivo</div>';
+  currentRuns.forEach((sec,i)=>{
+    if(sec<=0)return;
+    const tgt=effTargets.runs[i]||0;
+    const delta=tgt>0?sec-tgt:null;
+    const deltaStr=delta!==null?(delta>=0?'+':'')+delta+'s':'';
+    const deltaCls=delta!==null?(delta>3?'behind':delta<-3?'ahead':'neutral'):'neutral';
+    const barW=Math.round((sec/maxBarVal)*100);
+    const runDiff=sec-avgRun;
+    const barColor=runDiff>15?'rgba(255,77,106,0.7)':runDiff>5?'rgba(255,184,77,0.7)':'rgba(77,159,255,0.7)';
+    const isBest=i===bestIdx,isWorst=i===worstIdx;
+    const rowCls=isBest?'best':isWorst?'worst':'';
+    const label=`R${i+1}${isBest?' ★':isWorst?' ▼':''}`;
+    html+=`<div class="deg-run-row ${rowCls}">
+      <span class="deg-run-label">${label}</span>
+      <div class="deg-run-bar-wrap">
+        <div class="deg-run-bar" style="width:${barW}%;background:${barColor};"></div>
+      </div>
+      <span class="deg-run-time" style="color:${isBest?'var(--station)':isWorst?'var(--err)':'var(--text)'}">${secToMmss(sec)}</span>
+      <span class="deg-run-delta ${deltaCls}">${deltaStr}</span>
+    </div>`;
+  });
+
+  // Sección histórico
+  if(histAvgRuns&&validHistory.length>=2){
+    html+=`<div class="deg-section-label">vs. Histórico (${validHistory.length} carreras)</div>`;
+    currentRuns.forEach((sec,i)=>{
+      if(sec<=0)return;
+      const hAvg=histAvgRuns[i];
+      if(!hAvg)return;
+      const diff=sec-hAvg;
+      const diffStr=(diff>=0?'+':'')+diff+'s';
+      const diffCls=diff>3?'behind':diff<-3?'ahead':'neutral';
+      html+=`<div class="deg-run-row">
+        <span class="deg-run-label" style="color:var(--faint)">R${i+1}</span>
+        <div class="deg-run-bar-wrap">
+          <div class="deg-run-bar" style="width:${Math.round((hAvg/maxBarVal)*100)}%;background:rgba(255,255,255,0.1);"></div>
+        </div>
+        <span class="deg-run-time" style="color:var(--muted)">${secToMmss(hAvg)}</span>
+        <span class="deg-run-delta ${diffCls}">${diffStr}</span>
+      </div>`;
+    });
+  }
+  html+='</div>';
+  body.innerHTML=html;
+}
+
+
 function buildAll(){
   RUNS.forEach(r=>buildRow(r,document.getElementById('run-inputs'),'run'));
   STATIONS.forEach(s=>buildRow(s,document.getElementById('station-inputs'),'station'));
@@ -2258,6 +2436,7 @@ function onUpdate(){
     else{ge.textContent='¡Exacto!';ge.className='target-gap ahead';}
   }else{ge.textContent='— sin datos';ge.className='target-gap neutral';}}
   renderChart(rs,ss,rzs,rt,st,rzt,tot,tgt,allTargets);
+  renderDegradationPanel(rs);
 }
 function renderChart(rs,ss,rzs,rt,st,rzt,tot,tgt,allTargets){
   if(chartInstance){chartInstance.destroy();chartInstance=null;}
