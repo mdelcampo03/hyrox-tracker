@@ -574,6 +574,7 @@
   <div class="target-gap neutral" id="tgt-gap">— sin datos</div>
   <button class="btn" style="margin-left:8px;border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="openRacePlan()" title="Generar plan de carrera basado en el objetivo actual">🗓 Race Plan</button>
   <button class="btn" style="border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="openLimitingSegment()" title="Analizar qué segmentos te cuestan más tiempo">🎯 Segmento Limitante</button>
+  <button class="btn" style="border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="exportFullRacePDF()" title="Exportar análisis completo de la carrera a PDF (apto para imprimir)">📄 PDF Carrera</button>
 </div>
 
 <div class="main-tabs">
@@ -3537,6 +3538,431 @@ function exportRacePlanPDF() {
   // Save
   doc.save('hyrox_race_plan_' + rpStrategy + '_' + new Date().toISOString().slice(0,10) + '.pdf');
   showToast('✓ Race plan exportado como PDF');
+}
+
+// ── EXPORTAR ANÁLISIS COMPLETO DE CARRERA A PDF (tema claro, apto impresión) ──
+// Construye un radar con estilo claro en un canvas offscreen y lo devuelve como dataURL PNG
+function _buildRadarImagePDF(rs, ss, eff){
+  return new Promise(resolve=>{
+    if(typeof Chart==='undefined'){resolve(null);return;}
+    const cvs=document.createElement('canvas');
+    cvs.width=900; cvs.height=820;
+    const labels=[...RUNS.map(r=>r.name),...STATIONS.map(s=>s.name)];
+    const datasets=[
+      {label:'Running',data:[...rs,...new Array(8).fill(null)],
+        backgroundColor:'rgba(37,99,235,0.10)',borderColor:'#2563eb',borderWidth:2,pointBackgroundColor:'#2563eb',pointRadius:3},
+      {label:'Estaciones',data:[...new Array(8).fill(null),...ss],
+        backgroundColor:'rgba(5,150,105,0.10)',borderColor:'#059669',borderWidth:2,pointBackgroundColor:'#059669',pointRadius:3,borderDash:[5,3]},
+      {label:'Objetivo',data:[...eff.runs,...eff.stations],
+        backgroundColor:'rgba(0,0,0,0)',borderColor:'#b59a00',borderWidth:1.6,pointBackgroundColor:'#b59a00',pointRadius:2,borderDash:[4,4]},
+    ];
+    let chart;
+    try{
+      chart=new Chart(cvs.getContext('2d'),{
+        type:'radar',
+        data:{labels,datasets},
+        options:{
+          responsive:false, animation:false, devicePixelRatio:2,
+          layout:{padding:10},
+          plugins:{legend:{display:true,position:'top',labels:{color:'#333',font:{size:14},boxWidth:16,padding:16}}},
+          scales:{r:{beginAtZero:true,
+            grid:{color:'rgba(0,0,0,0.10)'},angleLines:{color:'rgba(0,0,0,0.10)'},
+            ticks:{color:'#999',font:{size:11},stepSize:60,backdropColor:'transparent',callback:v=>secToMmss(v)},
+            pointLabels:{color:'#444',font:{size:12}}}}
+        }
+      });
+    }catch(e){resolve(null);return;}
+    requestAnimationFrame(()=>{
+      let url=null;
+      try{ url=cvs.toDataURL('image/png',1.0); }catch(e){ url=null; }
+      try{ chart.destroy(); }catch(e){}
+      resolve(url);
+    });
+  });
+}
+
+async function exportFullRacePDF(){
+  if(typeof window.jspdf==='undefined'){
+    showToast('jsPDF no cargado — revisa tu conexión',true);
+    return;
+  }
+  const { jsPDF }=window.jspdf;
+
+  // ── Datos actuales del tracker ──
+  const rs=RUNS.map(r=>getSec(r.id)), ss=STATIONS.map(s=>getSec(s.id)), rzs=ROXZONES.map(r=>getSec(r.id));
+  const rt=rs.reduce((a,b)=>a+b,0), st=ss.reduce((a,b)=>a+b,0), rzt=rzs.reduce((a,b)=>a+b,0), tot=rt+st+rzt;
+  if(tot===0){
+    showToast('No hay carrera cargada para exportar',true);
+    return;
+  }
+  const eff=getEffectiveTargets();
+  const rtTgt=eff.runs.reduce((a,b)=>a+b,0), stTgt=eff.stations.reduce((a,b)=>a+b,0), rzTgt=eff.roxzones.reduce((a,b)=>a+b,0);
+  const tgtTotal=rtTgt+stTgt+rzTgt;
+
+  // Histórico (para fecha de carrera y comparación de degradación)
+  const history=await loadHistory();
+  const validHistory=history.filter(r=>Array.isArray(r.runs)&&r.runs.length===8&&r.runs.every(v=>v>0));
+  let histAvgRuns=null;
+  if(validHistory.length>=2){
+    histAvgRuns=Array(8).fill(0).map((_,i)=>{
+      const vals=validHistory.map(r=>r.runs[i]).filter(v=>v>0);
+      return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0;
+    });
+  }
+
+  // Nombre y fecha
+  const nameEl=document.getElementById('activity-name');
+  let raceName=(nameEl&&nameEl.textContent.trim())?nameEl.textContent.trim():'Carrera Hyrox';
+  let raceDate=null;
+  if(typeof loadedRaceId!=='undefined'&&loadedRaceId){
+    const lr=history.find(r=>r.id===loadedRaceId);
+    if(lr&&lr.date)raceDate=fmtDate(lr.date);
+  }
+  const genDate=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+  // Categoría / objetivo
+  let catLabel;
+  if(currentPreset==='avg')catLabel='Promedio del histórico';
+  else{
+    const pbtn=document.getElementById('preset-'+currentPreset);
+    catLabel=(pbtn&&pbtn.dataset.cat)?pbtn.dataset.cat:'Personalizado';
+  }
+
+  // ── Documento ──
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const PW=210, PH=297, MARGIN=12, contentW=PW-MARGIN*2;
+
+  // Paleta clara
+  const ACC=[232,255,0];               // solo sobre banda oscura del header
+  const RUN=[37,99,235], STA=[5,150,105], ROX=[150,150,148];
+  const INK=[33,33,38], MUTED=[110,110,116], FAINT=[165,165,170], LINE=[223,223,228];
+  const GOOD=[26,140,70], BAD=[208,55,80];
+
+  let y=0;
+
+  // ── HEADER (banda oscura) ──
+  doc.setFillColor(22,22,26); doc.rect(0,0,PW,30,'F');
+  doc.setFillColor(...ACC); doc.rect(0,30,PW,1.2,'F');
+  doc.setTextColor(...ACC); doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text('HYROX / ANÁLISIS DE CARRERA',MARGIN,13);
+  doc.setTextColor(235,235,235); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text(raceName.toUpperCase(),MARGIN,21);
+  doc.setTextColor(185,185,185); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text('Objetivo '+secToHmmss(tgtTotal)+'  ·  '+catLabel,MARGIN,27);
+  doc.setFontSize(8); doc.setTextColor(160,160,160);
+  if(raceDate)doc.text('Carrera: '+raceDate,PW-MARGIN,13,{align:'right'});
+  doc.text('Generado: '+genDate,PW-MARGIN,raceDate?18:13,{align:'right'});
+  y=38;
+
+  // Helpers de layout
+  function ensureSpace(h){ if(y+h>PH-16){ doc.addPage(); y=18; return true; } return false; }
+  function sectionTitle(t){
+    ensureSpace(12); y+=3;
+    const up=t.toUpperCase();
+    doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+    doc.text(up,MARGIN,y);
+    const tw=doc.getTextWidth(up);
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.3);
+    doc.line(MARGIN+tw+4,y-1,PW-MARGIN,y-1);
+    y+=5;
+  }
+  function deltaMMSS(d){ const a=Math.abs(d); return (d>0?'+':d<0?'-':'')+Math.floor(a/60)+':'+String(a%60).padStart(2,'0'); }
+
+  // ── 1) RESUMEN (4 tarjetas) ──
+  sectionTitle('Resumen');
+  const gap=4, cw=(contentW-gap*3)/4, ch=23;
+  const cards=[
+    {lab:'TOTAL',val:secToHmmss(tot),obj:secToHmmss(tgtTotal),d:tot-tgtTotal},
+    {lab:'RUN',val:secToMmss(rt),obj:secToMmss(rtTgt),d:rt-rtTgt},
+    {lab:'ESTACIONES',val:secToMmss(st),obj:secToMmss(stTgt),d:st-stTgt},
+    {lab:'ROXZONES',val:secToMmss(rzt),obj:secToMmss(rzTgt),d:rzt-rzTgt},
+  ];
+  ensureSpace(ch+4);
+  cards.forEach((c,i)=>{
+    const x=MARGIN+i*(cw+gap);
+    doc.setFillColor(250,250,250); doc.setDrawColor(...LINE); doc.setLineWidth(0.3);
+    doc.roundedRect(x,y,cw,ch,1.5,1.5,'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
+    doc.text(c.lab,x+3,y+5);
+    doc.setFontSize(i===0?13:12); doc.setTextColor(...INK);
+    doc.text(c.val,x+3,y+12.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(...MUTED);
+    doc.text('obj '+c.obj,x+3,y+17.5);
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+    doc.setTextColor(...(c.d>0?BAD:c.d<0?GOOD:MUTED));
+    doc.text(deltaMMSS(c.d),x+cw-3,y+17.5,{align:'right'});
+  });
+  y+=ch+4;
+
+  // ── 2) DISTRIBUCIÓN DE RITMO ──
+  sectionTitle('Distribución de ritmo');
+  ensureSpace(22);
+  const barY=y, barH=9;
+  let px=MARGIN;
+  const parts=[{v:rt,c:RUN,l:'Running'},{v:st,c:STA,l:'Estaciones'},{v:rzt,c:ROX,l:'Roxzones'}];
+  parts.forEach(p=>{ const w=contentW*(p.v/tot); doc.setFillColor(...p.c); doc.rect(px,barY,w,barH,'F'); px+=w; });
+  doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.rect(MARGIN,barY,contentW,barH,'S');
+  y+=barH+5.5;
+  let lx=MARGIN;
+  doc.setFontSize(8);
+  parts.forEach(p=>{
+    const pct=Math.round(p.v/tot*100);
+    doc.setFillColor(...p.c); doc.rect(lx,y-2.6,2.8,2.8,'F');
+    doc.setTextColor(...INK); doc.setFont('helvetica','bold');
+    const txt=p.l+' '+secToMmss(p.v)+' ('+pct+'%)';
+    doc.text(txt,lx+4.5,y);
+    lx+=doc.getTextWidth(txt)+14;
+  });
+  y+=6;
+
+  // ── 3) RADAR (imagen clara) ──
+  sectionTitle('Comparación radar (real vs objetivo)');
+  const radarUrl=await _buildRadarImagePDF(rs,ss,eff);
+  if(radarUrl){
+    const imgW=98, imgH=imgW*(820/900);
+    ensureSpace(imgH+3);
+    doc.addImage(radarUrl,'PNG',(PW-imgW)/2,y,imgW,imgH);
+    y+=imgH+4;
+  }else{
+    ensureSpace(8);
+    doc.setFont('helvetica','italic'); doc.setFontSize(8.5); doc.setTextColor(...MUTED);
+    doc.text('No se pudo generar la gráfica radar.',MARGIN,y); y+=6;
+  }
+
+  // ── 4) SPLITS DETALLADOS ──
+  sectionTitle('Splits detallados');
+  const COL_REAL=MARGIN+105, COL_OBJ=MARGIN+142, COL_DELTA=MARGIN+contentW;
+  function tableHeader(){
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(...FAINT);
+    doc.text('SEGMENTO',MARGIN+1,y);
+    doc.text('REAL',COL_REAL,y,{align:'right'});
+    doc.text('OBJETIVO',COL_OBJ,y,{align:'right'});
+    doc.text('Δ',COL_DELTA,y,{align:'right'});
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(MARGIN,y+1.5,PW-MARGIN,y+1.5);
+    y+=5;
+  }
+  ensureSpace(8); tableHeader();
+  const rowDefs=[];
+  RUNS.forEach((r,i)=>rowDefs.push({name:r.name,type:'run',badge:'RUN',c:RUN,actual:rs[i],tgt:eff.runs[i]}));
+  STATIONS.forEach((s,i)=>rowDefs.push({name:s.name,type:'station',badge:'WS',c:STA,actual:ss[i],tgt:eff.stations[i]}));
+  ROXZONES.forEach((z,i)=>rowDefs.push({name:z.name,type:'rz',badge:'RZ',c:ROX,actual:rzs[i],tgt:eff.roxzones[i]}));
+  const RH=6.4;
+  rowDefs.forEach((rw,ri)=>{
+    if(ensureSpace(RH+1)) tableHeader();
+    if(ri%2===0){ doc.setFillColor(249,249,250); doc.rect(MARGIN,y-3.6,contentW,RH,'F'); }
+    doc.setFillColor(...rw.c); doc.rect(MARGIN,y-3.6,1.1,RH,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(...rw.c);
+    doc.text(rw.badge,MARGIN+3,y);
+    doc.setTextColor(...INK); doc.setFont('helvetica',rw.type==='rz'?'normal':'bold'); doc.setFontSize(rw.type==='rz'?8:9);
+    doc.text(rw.name,MARGIN+13,y);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...INK);
+    doc.text(rw.actual>0?secToMmss(rw.actual):'—',COL_REAL,y,{align:'right'});
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...MUTED);
+    doc.text(secToMmss(rw.tgt),COL_OBJ,y,{align:'right'});
+    if(rw.actual>0){
+      const d=rw.actual-rw.tgt;
+      doc.setFont('helvetica','bold'); doc.setFontSize(8.5);
+      doc.setTextColor(...(d>3?BAD:d<-3?GOOD:MUTED));
+      doc.text((d>=0?'+':'')+d+'s',COL_DELTA,y,{align:'right'});
+    }
+    y+=RH;
+  });
+  y+=1;
+
+  // ── 5) DEGRADACIÓN DE RUNS ──
+  sectionTitle('Degradación de runs');
+  const validRuns=rs.filter(v=>v>0);
+  if(validRuns.length){
+    const firstRun=rs[0]||0, lastRun=rs[rs.length-1]||0;
+    const minRun=Math.min(...validRuns), maxRun=Math.max(...validRuns);
+    const bestIdx=rs.indexOf(minRun), worstIdx=rs.indexOf(maxRun);
+    const avgRun=Math.round(validRuns.reduce((a,b)=>a+b,0)/validRuns.length);
+    const degradSec=lastRun-firstRun;
+    const degradPct=firstRun>0?Math.round((degradSec/firstRun)*100):0;
+    const nv=validRuns.length, xMean=(nv-1)/2; let num=0,den=0;
+    validRuns.forEach((v,i)=>{num+=(i-xMean)*(v-avgRun);den+=(i-xMean)*(i-xMean);});
+    const slope=den!==0?num/den:0;
+    const slopePct=avgRun>0?(Math.round((slope/avgRun)*1000)/10):0;
+    const absPct=Math.abs(degradPct);
+    let sevLabel,sevCol;
+    if(degradSec<-3){sevLabel='Negativa (mejora)';sevCol=GOOD;}
+    else if(absPct<=3){sevLabel='Estable';sevCol=GOOD;}
+    else if(absPct<=8){sevLabel='Moderada';sevCol=[200,140,20];}
+    else{sevLabel='Severa';sevCol=BAD;}
+
+    // Strip de 3 stats + severidad
+    ensureSpace(20);
+    const sgap=4, sw=(contentW-sgap*3)/4, shh=15;
+    const stats=[
+      {lab:'1° vs ÚLTIMO',val:(degradSec>=0?'+':'')+degradSec+'s',col:degradSec>3?BAD:degradSec<-3?GOOD:INK},
+      {lab:'VARIACIÓN TOTAL',val:(degradPct>=0?'+':'')+degradPct+'%',col:absPct>5?BAD:INK},
+      {lab:'TENDENCIA/KM',val:(slope>=0?'+':'')+slopePct+'s',col:slope>2?BAD:slope<-2?GOOD:INK},
+      {lab:'SEVERIDAD',val:sevLabel,col:sevCol,small:true},
+    ];
+    stats.forEach((s,i)=>{
+      const x=MARGIN+i*(sw+sgap);
+      doc.setFillColor(250,250,250); doc.setDrawColor(...LINE); doc.setLineWidth(0.3);
+      doc.roundedRect(x,y,sw,shh,1.5,1.5,'FD');
+      doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(...FAINT);
+      doc.text(s.lab,x+2.5,y+4.5);
+      doc.setFont('helvetica','bold'); doc.setFontSize(s.small?8.5:11); doc.setTextColor(...s.col);
+      doc.text(s.val,x+2.5,y+11.5);
+    });
+    y+=shh+4;
+
+    // Barras por run vs objetivo (+ hist si existe)
+    const maxBar=Math.max(...validRuns,1);
+    const hasHist=!!histAvgRuns;
+    rs.forEach((sec,i)=>{
+      if(sec<=0)return;
+      ensureSpace(6);
+      const tgt=eff.runs[i]||0, d=tgt>0?sec-tgt:0;
+      const isBest=i===bestIdx, isWorst=i===worstIdx;
+      const lbl='R'+(i+1)+(isBest?' ★':isWorst?' ▼':'');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(isBest?STA[0]:isWorst?BAD[0]:INK[0],isBest?STA[1]:isWorst?BAD[1]:INK[1],isBest?STA[2]:isWorst?BAD[2]:INK[2]);
+      doc.text(lbl,MARGIN,y);
+      const barX=MARGIN+15, barMaxW=70, bw=Math.max(1,(sec/maxBar)*barMaxW);
+      const diff=sec-avgRun;
+      const bc=diff>15?[230,90,110]:diff>5?[235,170,70]:[90,150,230];
+      doc.setFillColor(238,238,240); doc.rect(barX,y-2.6,barMaxW,2.8,'F');
+      doc.setFillColor(...bc); doc.rect(barX,y-2.6,bw,2.8,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...INK);
+      doc.text(secToMmss(sec),barX+barMaxW+12,y,{align:'right'});
+      if(tgt>0){
+        doc.setFontSize(7.5); doc.setTextColor(...(d>3?BAD:d<-3?GOOD:MUTED));
+        doc.text('obj '+(d>=0?'+':'')+d+'s',barX+barMaxW+40,y,{align:'right'});
+      }
+      if(hasHist&&histAvgRuns[i]){
+        const hd=sec-histAvgRuns[i];
+        doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...FAINT);
+        doc.text('hist '+(hd>=0?'+':'')+hd+'s',COL_DELTA,y,{align:'right'});
+      }
+      y+=5.4;
+    });
+    if(hasHist){
+      ensureSpace(5);
+      doc.setFont('helvetica','italic'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
+      doc.text('★ mejor run · ▼ peor run · "hist" = vs. promedio de '+validHistory.length+' carreras del histórico',MARGIN,y);
+      y+=4;
+    }else{
+      ensureSpace(5);
+      doc.setFont('helvetica','italic'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
+      doc.text('★ mejor run · ▼ peor run',MARGIN,y);
+      y+=4;
+    }
+  }else{
+    ensureSpace(7);
+    doc.setFont('helvetica','italic'); doc.setFontSize(8.5); doc.setTextColor(...MUTED);
+    doc.text('Sin datos de running para analizar degradación.',MARGIN,y); y+=6;
+  }
+
+  // ── 6) SEGMENTO LIMITANTE ──
+  sectionTitle('Segmento limitante');
+  const allActual=[...rs,...ss,...rzs];
+  const allTargets=[...eff.runs,...eff.stations,...eff.roxzones];
+  const allItems=[...RUNS,...STATIONS,...ROXZONES];
+  const allTypes=[...Array(8).fill('run'),...Array(8).fill('station'),...Array(7).fill('rz')];
+  const analysis=allItems.map((item,i)=>{
+    const actual=allActual[i], target=allTargets[i], type=allTypes[i], filledIn=actual>0;
+    const deltaAbs=filledIn?actual-target:0;
+    const deltaPct=filledIn&&target>0?(deltaAbs/target)*100:0;
+    const score=deltaAbs>0?deltaAbs*(1+Math.max(0,deltaPct)/100):0;
+    let tipKey; if(type==='run')tipKey='run'; else if(type==='rz')tipKey='rz'; else tipKey=item.id;
+    return {id:item.id,name:item.name,type,actual,target,filledIn,deltaAbs,
+      deltaPct:Math.round(deltaPct*10)/10,score,tip:LS_TIPS[tipKey]||''};
+  });
+  const ranked=analysis.filter(a=>a.filledIn).sort((a,b)=>b.score-a.score);
+  const behind=ranked.filter(a=>a.deltaAbs>0);
+  if(behind.length===0){
+    ensureSpace(8);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...GOOD);
+    doc.text('Todos tus segmentos están en o bajo objetivo. Sin limitante identificado.',MARGIN,y);
+    y+=6;
+  }else{
+    const top3=behind.slice(0,3);
+    const totalLost=behind.reduce((s,a)=>s+a.deltaAbs,0);
+    const top3Lost=top3.reduce((s,a)=>s+a.deltaAbs,0);
+    const top3Pct=totalLost>0?Math.round((top3Lost/totalLost)*100):0;
+    // Resumen
+    ensureSpace(10);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...INK);
+    const sumTxt='Estás +'+totalLost+'s sobre objetivo en '+behind.length+' segmento'+(behind.length===1?'':'s')+
+      '. Tus top 3 limitantes concentran el '+top3Pct+'% de esa pérdida — trabajarlos rinde más que repartir esfuerzo.';
+    const sumWrap=doc.splitTextToSize(sumTxt,contentW);
+    doc.text(sumWrap,MARGIN,y); y+=sumWrap.length*4+2;
+    const badgeOf={run:'RUN',station:'WS',rz:'RZ'}, colOf={run:RUN,station:STA,rz:ROX};
+    top3.forEach((a,idx)=>{
+      const tipWrap=doc.splitTextToSize('Cómo mejorarlo: '+a.tip,contentW-8);
+      const blockH=12+tipWrap.length*3.4;
+      ensureSpace(blockH+2);
+      const pctLoss=totalLost>0?Math.round((a.deltaAbs/totalLost)*100):0;
+      doc.setFillColor(250,250,250); doc.setDrawColor(...LINE); doc.setLineWidth(0.3);
+      doc.roundedRect(MARGIN,y,contentW,blockH,1.5,1.5,'FD');
+      doc.setFillColor(...colOf[a.type]); doc.rect(MARGIN,y,1.4,blockH,'F');
+      // rank
+      doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(...FAINT);
+      doc.text('#'+(idx+1),MARGIN+5,y+8);
+      // badge + name
+      doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(...colOf[a.type]);
+      doc.text(badgeOf[a.type],MARGIN+18,y+5.5);
+      doc.setTextColor(...INK); doc.setFont('helvetica','bold'); doc.setFontSize(9.5);
+      doc.text(a.name,MARGIN+28,y+6);
+      doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+      doc.text('Real '+secToMmss(a.actual)+' vs objetivo '+secToMmss(a.target)+'  ·  '+pctLoss+'% de tu pérdida total',MARGIN+18,y+10);
+      // métricas a la derecha
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...BAD);
+      doc.text('+'+a.deltaAbs+'s',MARGIN+contentW-3,y+6.5,{align:'right'});
+      doc.setFontSize(7.5); doc.setTextColor(...MUTED);
+      doc.text('+'+a.deltaPct+'%',MARGIN+contentW-3,y+11,{align:'right'});
+      // tip
+      doc.setFont('helvetica','italic'); doc.setFontSize(7); doc.setTextColor(...MUTED);
+      doc.text(tipWrap,MARGIN+5,y+14.5);
+      y+=blockH+3;
+    });
+    // Ranking compacto completo
+    if(ranked.length>3){
+      sectionTitle('Ranking completo de segmentos');
+      ensureSpace(6);
+      doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
+      doc.text('#  SEGMENTO',MARGIN+1,y);
+      doc.text('Δ ABS',MARGIN+120,y,{align:'right'});
+      doc.text('Δ REL',MARGIN+contentW,y,{align:'right'});
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(MARGIN,y+1.5,PW-MARGIN,y+1.5);
+      y+=4.5;
+      ranked.forEach((a,idx)=>{
+        if(ensureSpace(5.4)){
+          doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
+          doc.text('#  SEGMENTO',MARGIN+1,y); doc.text('Δ ABS',MARGIN+120,y,{align:'right'}); doc.text('Δ REL',MARGIN+contentW,y,{align:'right'});
+          doc.setDrawColor(...LINE); doc.line(MARGIN,y+1.5,PW-MARGIN,y+1.5); y+=4.5;
+        }
+        if(idx%2===0){ doc.setFillColor(249,249,250); doc.rect(MARGIN,y-3.4,contentW,5.2,'F'); }
+        const dCol=a.deltaAbs>3?BAD:a.deltaAbs<-3?GOOD:MUTED;
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...FAINT);
+        doc.text('#'+(idx+1),MARGIN+1,y);
+        doc.setTextColor(...INK); doc.setFont('helvetica',a.type==='rz'?'normal':'bold');
+        doc.text(a.name,MARGIN+12,y);
+        doc.setFont('helvetica','bold'); doc.setTextColor(...dCol);
+        doc.text((a.deltaAbs>=0?'+':'')+a.deltaAbs+'s',MARGIN+120,y,{align:'right'});
+        doc.text((a.deltaPct>=0?'+':'')+a.deltaPct+'%',MARGIN+contentW,y,{align:'right'});
+        y+=5.2;
+      });
+    }
+  }
+
+  // ── FOOTERS en todas las páginas ──
+  const pages=doc.getNumberOfPages();
+  for(let p=1;p<=pages;p++){
+    doc.setPage(p);
+    doc.setDrawColor(...LINE); doc.setLineWidth(0.2);
+    doc.line(MARGIN,PH-12,PW-MARGIN,PH-12);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...FAINT);
+    doc.text('Hyrox Performance Tracker',MARGIN,PH-8);
+    doc.text(raceName+'  ·  '+genDate,PW/2,PH-8,{align:'center'});
+    doc.text('Pág. '+p+'/'+pages,PW-MARGIN,PH-8,{align:'right'});
+  }
+
+  const slug=raceName.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40)||'carrera';
+  doc.save('hyrox_analisis_'+slug+'_'+new Date().toISOString().slice(0,10)+'.pdf');
+  showToast('✓ Análisis de carrera exportado como PDF');
 }
 
 function _exportRacePlanImage_legacy() {
