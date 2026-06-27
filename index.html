@@ -292,6 +292,12 @@
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:100;}
   .modal-overlay.open{display:flex;}
   .modal{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--accent);border-radius:0 0 2px 2px;padding:24px;min-width:300px;max-width:420px;width:92%;}
+  .race-compare-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:2px;padding:9px 11px;cursor:pointer;transition:all .15s;color:var(--text);}
+  .race-compare-item:hover{border-color:var(--run);background:var(--surface3);}
+  .race-compare-item.selected{border-color:var(--run);background:rgba(77,159,255,0.1);}
+  .race-compare-item .rc-name{font-family:'Inter Tight',sans-serif;font-weight:700;font-size:13px;}
+  .race-compare-item .rc-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+  .race-compare-item .rc-tag{font-family:'JetBrains Mono',monospace;font-size:8px;background:rgba(77,159,255,0.2);color:var(--run);padding:1px 5px;border-radius:2px;margin-left:4px;vertical-align:middle;}
   .modal h3{font-family:'Archivo Black',sans-serif;font-size:1rem;letter-spacing:-0.02em;color:var(--accent);margin-bottom:6px;text-transform:uppercase;}
   .modal p{font-family:'Inter Tight',sans-serif;font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;}
   .modal input[type=text]{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;padding:10px 12px;outline:none;margin-bottom:16px;}
@@ -564,6 +570,7 @@
     <button class="preset-btn" id="preset-95" onclick="setPreset(95)" data-cat="Principiante">💪 1h 35m</button>
     <button class="preset-btn" id="preset-105" onclick="setPreset(105)" data-cat="Completar">✅ 1h 45m</button>
     <button class="preset-btn" id="preset-avg" onclick="setPresetAvg()" data-cat="Promedio del histórico" style="display:none;border-color:rgba(232,255,0,0.4);color:var(--accent);">📊 Promedio</button>
+    <button class="preset-btn" id="preset-race" onclick="openRaceCompareSelect()" data-cat="Comparar contra una carrera del histórico" style="border-color:rgba(77,159,255,0.5);color:var(--run);">📋 vs Carrera</button>
     <div class="custom-target-wrap" data-cat="55 a 120 min">
       <span class="custom-target-icon">⚙</span>
       <input type="number" id="custom-target-input" min="55" max="120" step="1" placeholder="min" title="Objetivo personalizado entre 55 y 120 minutos">
@@ -707,6 +714,18 @@
         Guardar + Sync a Sheets
       </button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL COMPARAR CONTRA CARRERA DEL HISTÓRICO -->
+<div class="modal-overlay" id="raceCompareModal" onclick="if(event.target===this)closeRaceCompareModal()">
+  <div class="modal" style="max-width:460px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <h3 style="margin:0;">Comparar contra carrera</h3>
+      <button class="ls-modal-close" onclick="closeRaceCompareModal()">✕</button>
+    </div>
+    <p style="margin-top:6px;">Elige una carrera del histórico. Sus tiempos por segmento se usarán como objetivo de comparación en el análisis y en el PDF.</p>
+    <div id="raceCompareList" style="max-height:48vh;overflow:auto;display:flex;flex-direction:column;gap:6px;"></div>
   </div>
 </div>
 
@@ -895,6 +914,7 @@ const PRESET_TARGETS={
 let currentPreset=75, chartInstance=null, compareChartInstance=null, currentView='radar';
 let radarShowRoxzones=false, radarNormalized=false;
 let pendingFile=null, openCards={};
+let compareRace=null;
 
 // ── STORAGE ───────────────────────────────────────────────
 // Usa window.storage cuando está en Claude, localStorage cuando es local
@@ -1302,34 +1322,37 @@ async function mergeSheetData(sheetRows){
 // ── PRESET ────────────────────────────────────────────────
 // Devuelve el total en segundos del objetivo actual, manejando tanto presets numéricos como 'avg'
 function getCurrentTargetSec(){
-  if(currentPreset==='avg'){
-    const p=PRESET_TARGETS['avg'];
-    if(!p)return 75*60;// fallback si no hay promedio calculado
+  if(typeof currentPreset!=='number'){
+    const p=PRESET_TARGETS[currentPreset];
+    if(!p)return 75*60;// fallback si no hay arrays para esta clave
     return p.runs.reduce((a,b)=>a+b,0)+p.stations.reduce((a,b)=>a+b,0)+p.roxzones.reduce((a,b)=>a+b,0);
   }
-  return (typeof currentPreset==='number'?currentPreset:75)*60;
+  return currentPreset*60;
 }
 
 function setPreset(min){
   currentPreset=min;
   document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
-  // Si es el preset de promedio
+  const isRace=(typeof min==='string'&&min.startsWith('race:'));
+  // Marcar botón activo según el tipo de objetivo
   if(min==='avg'){
     document.getElementById('preset-avg')?.classList.add('active');
+  }else if(isRace){
+    document.getElementById('preset-race')?.classList.add('active');
   }else{
     document.getElementById('preset-'+min)?.classList.add('active');
   }
-  // Si no es preset predefinido, marcar el wrap personalizado como activo
+  // Solo marcar el wrap personalizado activo para objetivos numéricos no predefinidos
   const customWrap=document.querySelector('.custom-target-wrap');
   const predefined=[60,65,70,75,80,85,90,95,105];
   if(customWrap){
-    if(min!=='avg'&&!predefined.includes(min))customWrap.classList.add('active');
+    if(typeof min==='number'&&!predefined.includes(min))customWrap.classList.add('active');
     else customWrap.classList.remove('active');
   }
   // Calcular total en segundos para mostrar en target-display
   const preset=PRESET_TARGETS[min];
   let totalSec;
-  if(min==='avg'&&preset){
+  if(typeof min!=='number'&&preset){
     totalSec=preset.runs.reduce((a,b)=>a+b,0)+preset.stations.reduce((a,b)=>a+b,0)+preset.roxzones.reduce((a,b)=>a+b,0);
   }else{
     totalSec=(typeof min==='number')?min*60:0;
@@ -1389,6 +1412,66 @@ function setPresetAvg(){
     return;
   }
   setPreset('avg');
+}
+
+// ── COMPARAR CONTRA CARRERA DEL HISTÓRICO ──────────────────
+// La carrera elegida funciona como "objetivo": sus tiempos por segmento se
+// guardan en PRESET_TARGETS['race:'+id] y se usan en radar, deltas, degradación,
+// segmento limitante y el PDF, exactamente igual que un objetivo de tiempo.
+async function openRaceCompareSelect(){
+  const history=await loadHistory();
+  const valid=history.filter(r=>
+    Array.isArray(r.runs)&&r.runs.length===8&&
+    Array.isArray(r.stations)&&r.stations.length===8&&
+    Array.isArray(r.roxzones)&&r.roxzones.length===7&&
+    r.total>0
+  ).sort((a,b)=>(b.date||0)-(a.date||0));
+  if(valid.length===0){
+    showToast('No hay carreras válidas en el histórico para comparar',true);
+    return;
+  }
+  const list=document.getElementById('raceCompareList');
+  if(!list)return;
+  list.innerHTML='';
+  valid.forEach(r=>{
+    const isCurrent=(typeof loadedRaceId!=='undefined'&&loadedRaceId===r.id);
+    const isSelected=(currentPreset==='race:'+r.id);
+    const row=document.createElement('button');
+    row.className='race-compare-item'+(isSelected?' selected':'');
+    row.onclick=()=>setPresetRace(r.id);
+    row.innerHTML=
+      '<span class="rc-name">'+r.name+(isCurrent?' <span class="rc-tag">CARGADA</span>':'')+'</span>'+
+      '<span class="rc-meta">'+fmtDate(r.date)+' · '+secToHmmss(r.total)+'</span>';
+    list.appendChild(row);
+  });
+  document.getElementById('raceCompareModal').classList.add('open');
+}
+
+function closeRaceCompareModal(){
+  document.getElementById('raceCompareModal')?.classList.remove('open');
+}
+
+async function setPresetRace(id){
+  const history=await loadHistory();
+  const race=history.find(r=>r.id===id);
+  if(!race){showToast('No se encontró la carrera',true);return;}
+  const runs=race.runs.slice(0,8).map(v=>v||0);
+  const stations=race.stations.slice(0,8).map(v=>v||0);
+  const roxzones=(race.roxzones||[]).slice(0,7).map(v=>v||0);
+  while(roxzones.length<7)roxzones.push(0);
+  const key='race:'+id;
+  PRESET_TARGETS[key]={runs,stations,roxzones};
+  compareRace={id:race.id,name:race.name,date:race.date,total:race.total};
+  // Etiquetar el botón con el nombre de la carrera de comparación
+  const btn=document.getElementById('preset-race');
+  if(btn){
+    const short=race.name.length>16?race.name.slice(0,15)+'…':race.name;
+    btn.textContent='📋 vs '+short;
+    btn.setAttribute('data-cat','Comparando contra: '+race.name+' · '+fmtDate(race.date)+' · '+secToHmmss(race.total));
+  }
+  closeRaceCompareModal();
+  setPreset(key);
+  showToast('Comparando contra "'+race.name+'" — los objetivos por segmento son los tiempos de esa carrera');
 }
 
 // Calcular y aplicar objetivo personalizado (55-120 min)
@@ -3655,7 +3738,9 @@ async function exportFullRacePDF(){
   // Categoría / objetivo
   let catLabel;
   if(currentPreset==='avg')catLabel='Promedio del histórico';
-  else{
+  else if(typeof currentPreset==='string'&&currentPreset.startsWith('race:')){
+    catLabel='vs '+((compareRace&&compareRace.name)?compareRace.name:'carrera del histórico');
+  }else{
     const pbtn=document.getElementById('preset-'+currentPreset);
     catLabel=(pbtn&&pbtn.dataset.cat)?pbtn.dataset.cat:'Personalizado';
   }
