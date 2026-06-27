@@ -3581,6 +3581,39 @@ function _buildRadarImagePDF(rs, ss, eff){
   });
 }
 
+// Gráfica de barras clara (real vs objetivo por segmento) → dataURL PNG
+function _buildBarImagePDF(allActual, allTargets){
+  return new Promise(resolve=>{
+    if(typeof Chart==='undefined'){resolve(null);return;}
+    const cvs=document.createElement('canvas');
+    cvs.width=1400; cvs.height=620;
+    const labels=[...RUNS.map(r=>r.name),...STATIONS.map(s=>s.name),...ROXZONES.map(r=>r.name)];
+    const colors=[...Array(8).fill('rgba(37,99,235,0.78)'),...Array(8).fill('rgba(5,150,105,0.78)'),...Array(7).fill('rgba(150,150,148,0.78)')];
+    const borders=[...Array(8).fill('#2563eb'),...Array(8).fill('#059669'),...Array(7).fill('#9a9a96')];
+    let chart;
+    try{
+      chart=new Chart(cvs.getContext('2d'),{
+        type:'bar',
+        data:{labels,datasets:[
+          {label:'Real',data:allActual,backgroundColor:colors,borderColor:borders,borderWidth:1,borderRadius:2,order:1},
+          {label:'Objetivo',data:allTargets,type:'line',borderColor:'#b59a00',borderWidth:1.6,borderDash:[5,3],pointBackgroundColor:'#b59a00',pointRadius:3,fill:false,order:0},
+        ]},
+        options:{responsive:false,animation:false,devicePixelRatio:2,layout:{padding:10},
+          plugins:{legend:{display:true,labels:{color:'#333',font:{size:14},boxWidth:14,padding:14}}},
+          scales:{
+            x:{ticks:{color:'#444',font:{size:11},maxRotation:62,minRotation:55,autoSkip:false},grid:{color:'rgba(0,0,0,0.05)'}},
+            y:{beginAtZero:true,ticks:{color:'#888',font:{size:11},callback:v=>secToMmss(v)},grid:{color:'rgba(0,0,0,0.10)'}}
+          }}
+      });
+    }catch(e){resolve(null);return;}
+    requestAnimationFrame(()=>{
+      let url=null; try{ url=cvs.toDataURL('image/png',1.0); }catch(e){ url=null; }
+      try{ chart.destroy(); }catch(e){}
+      resolve(url);
+    });
+  });
+}
+
 async function exportFullRacePDF(){
   if(typeof window.jspdf==='undefined'){
     showToast('jsPDF no cargado — revisa tu conexión',true);
@@ -3728,6 +3761,20 @@ async function exportFullRacePDF(){
     doc.text('No se pudo generar la gráfica radar.',MARGIN,y); y+=6;
   }
 
+  // ── 3b) BARRAS POR SEGMENTO (imagen clara) ──
+  sectionTitle('Comparación por segmento (barras)');
+  const barUrl=await _buildBarImagePDF([...rs,...ss,...rzs],[...eff.runs,...eff.stations,...eff.roxzones]);
+  if(barUrl){
+    const bw=contentW, bh=bw*(620/1400);
+    ensureSpace(bh+3);
+    doc.addImage(barUrl,'PNG',MARGIN,y,bw,bh);
+    y+=bh+4;
+  }else{
+    ensureSpace(8);
+    doc.setFont('helvetica','italic'); doc.setFontSize(8.5); doc.setTextColor(...MUTED);
+    doc.text('No se pudo generar la gráfica de barras.',MARGIN,y); y+=6;
+  }
+
   // ── 4) SPLITS DETALLADOS ──
   sectionTitle('Splits detallados');
   const COL_REAL=MARGIN+105, COL_OBJ=MARGIN+142, COL_DELTA=MARGIN+contentW;
@@ -3736,7 +3783,7 @@ async function exportFullRacePDF(){
     doc.text('SEGMENTO',MARGIN+1,y);
     doc.text('REAL',COL_REAL,y,{align:'right'});
     doc.text('OBJETIVO',COL_OBJ,y,{align:'right'});
-    doc.text('Δ',COL_DELTA,y,{align:'right'});
+    doc.text('DIF',COL_DELTA,y,{align:'right'});
     doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(MARGIN,y+1.5,PW-MARGIN,y+1.5);
     y+=5;
   }
@@ -3817,7 +3864,7 @@ async function exportFullRacePDF(){
       ensureSpace(6);
       const tgt=eff.runs[i]||0, d=tgt>0?sec-tgt:0;
       const isBest=i===bestIdx, isWorst=i===worstIdx;
-      const lbl='R'+(i+1)+(isBest?' ★':isWorst?' ▼':'');
+      const lbl='R'+(i+1);
       doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(isBest?STA[0]:isWorst?BAD[0]:INK[0],isBest?STA[1]:isWorst?BAD[1]:INK[1],isBest?STA[2]:isWorst?BAD[2]:INK[2]);
       doc.text(lbl,MARGIN,y);
       const barX=MARGIN+15, barMaxW=70, bw=Math.max(1,(sec/maxBar)*barMaxW);
@@ -3841,12 +3888,12 @@ async function exportFullRacePDF(){
     if(hasHist){
       ensureSpace(5);
       doc.setFont('helvetica','italic'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
-      doc.text('★ mejor run · ▼ peor run · "hist" = vs. promedio de '+validHistory.length+' carreras del histórico',MARGIN,y);
+      doc.text('Mejor run en verde · Peor run en rojo · "hist" = vs. promedio de '+validHistory.length+' carreras del histórico',MARGIN,y);
       y+=4;
     }else{
       ensureSpace(5);
       doc.setFont('helvetica','italic'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
-      doc.text('★ mejor run · ▼ peor run',MARGIN,y);
+      doc.text('Mejor run en verde · Peor run en rojo',MARGIN,y);
       y+=4;
     }
   }else{
@@ -3924,14 +3971,14 @@ async function exportFullRacePDF(){
       ensureSpace(6);
       doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
       doc.text('#  SEGMENTO',MARGIN+1,y);
-      doc.text('Δ ABS',MARGIN+120,y,{align:'right'});
-      doc.text('Δ REL',MARGIN+contentW,y,{align:'right'});
+      doc.text('DIF ABS',MARGIN+120,y,{align:'right'});
+      doc.text('DIF REL',MARGIN+contentW,y,{align:'right'});
       doc.setDrawColor(...LINE); doc.setLineWidth(0.3); doc.line(MARGIN,y+1.5,PW-MARGIN,y+1.5);
       y+=4.5;
       ranked.forEach((a,idx)=>{
         if(ensureSpace(5.4)){
           doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(...FAINT);
-          doc.text('#  SEGMENTO',MARGIN+1,y); doc.text('Δ ABS',MARGIN+120,y,{align:'right'}); doc.text('Δ REL',MARGIN+contentW,y,{align:'right'});
+          doc.text('#  SEGMENTO',MARGIN+1,y); doc.text('DIF ABS',MARGIN+120,y,{align:'right'}); doc.text('DIF REL',MARGIN+contentW,y,{align:'right'});
           doc.setDrawColor(...LINE); doc.line(MARGIN,y+1.5,PW-MARGIN,y+1.5); y+=4.5;
         }
         if(idx%2===0){ doc.setFillColor(249,249,250); doc.rect(MARGIN,y-3.4,contentW,5.2,'F'); }
