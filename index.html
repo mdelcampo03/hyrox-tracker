@@ -513,6 +513,7 @@
     <button class="btn gs" id="config-btn" onclick="openSheetSetup()" title="Configurar Google Sheet">⚙ Conectar mi Sheet</button>
     <button class="btn gs" id="pull-btn" onclick="pullFromSheets()" title="Importar carreras desde Google Sheets">↓ Importar</button>
     <button class="btn gs" id="sync-btn" onclick="syncPendingToSheets()">↑ Sync a Sheets</button>
+    <button class="btn gs" id="fb-import-btn" onclick="importFromFirebase()" title="Importar resultados del cronómetro a tu Sheet (requiere conectar Google)">🔥 Firebase</button>
   </div>
 </div>
 
@@ -587,6 +588,7 @@
 <div class="main-tabs">
   <button class="main-tab active" onclick="switchTab('tracker',this)">Tracker</button>
   <button class="main-tab" onclick="switchTab('history',this)">Histórico <span id="history-badge" style="font-size:0.65rem;color:var(--muted);"></span></button>
+  <button class="main-tab" onclick="switchTab('firebase',this)">🔥 Firebase</button>
 </div>
 
 <!-- TAB TRACKER -->
@@ -697,6 +699,18 @@
       <div class="compare-title">Evolución — tiempo total por carrera</div>
       <div class="compare-wrap"><canvas id="compareChart"></canvas></div>
     </div>
+  </div>
+</div>
+
+<!-- TAB FIREBASE (resultados del cronómetro, solo lectura) -->
+<div id="tab-firebase" class="tab-panel">
+  <div class="history-panel">
+    <div class="history-header">
+      <span class="history-count" id="firebase-count">—</span>
+      <button class="btn gs" style="font-size:0.68rem;padding:5px 11px;" onclick="importFromFirebase()">🔥 Importar sesión</button>
+      <button class="btn" style="font-size:0.68rem;padding:5px 11px;" onclick="renderFirebaseView()">↻ Actualizar</button>
+    </div>
+    <div id="firebase-list"></div>
   </div>
 </div>
 
@@ -841,6 +855,14 @@ function openInBrowser(ev,url){
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbytNQT8-1k5WojnabZNw1UicEzuYk9GRdTedVboOaKavput_RTmEFH-Z5D2u_ITW5gQ/exec';
 const STORAGE_KEY = 'hyrox-history-v2';
 const SHEET_ID_KEY = 'hyrox-sheet-id';
+
+// ── FIREBASE (app de cronometraje) ───────────────────────
+// Endpoint público (solo lectura) de la Realtime Database del cronómetro.
+// El import es 100% cliente-side: lee la RTDB y escribe en la pestaña
+// 'Firebase' de la hoja del usuario con su token OAuth. 'Hyrox' no se toca.
+const FB_RTDB_BASE = 'https://simulacion-primus-default-rtdb.firebaseio.com/sessions/';
+const FB_TAB = 'Firebase';
+const FB_TAB_HEADERS = ['Fecha','Nombre','Objetivo(min)','Total(seg)','Run(seg)','Estaciones(seg)','Roxzone(seg)','Run1','Run2','Run3','Run4','Run5','Run6','Run7','Run8','SkiErg','SledPush','SledPull','BurpeeBJ','Rowing','FarmerCarry','SandbagLunges','WallBalls','Roxzone1','Roxzone2','Roxzone3','Roxzone4','Roxzone5','Roxzone6','Roxzone7','SessionId','Bib','Cat','Rank','Finished'];
 
 // Sheet ID del usuario (en localStorage del navegador)
 function getUserSheetId(){
@@ -1209,6 +1231,187 @@ async function doSyncRaceFetch(race){
     console.warn('Fetch POST failed:',e);
     return false;
   }
+}
+
+// ── IMPORT desde Firebase RTDB (cronómetro), cliente-side ──
+// Requiere OAuth: lee la RTDB pública y escribe en la pestaña 'Firebase'
+// de la hoja del usuario. Dedup por SessionId+Bib. Solo atletas finished.
+async function importFromFirebase(){
+  if(getAuthMethod()!=='oauth'||!oauthToken||!getOAuthSheetId()){
+    showToast('Conéctate con Google para importar de Firebase',true);
+    return;
+  }
+  const sessionId=(prompt('ID de la sesión de Firebase (ej. prueba1):')||'').trim();
+  if(!sessionId)return;
+  const sid=getOAuthSheetId();
+  showToast('Leyendo sesión "'+sessionId+'" de Firebase…');
+  try{
+    const fr=await fetch(FB_RTDB_BASE+encodeURIComponent(sessionId)+'/state.json');
+    if(!fr.ok)throw new Error('Firebase HTTP '+fr.status);
+    const state=await fr.json();
+    if(!state)throw new Error('La sesión "'+sessionId+'" no existe o está vacía');
+    const athletes=fbToArray(state.athletes).filter(a=>a&&a.finished===true);
+    if(!athletes.length){showToast('La sesión no tiene atletas con carrera terminada',true);return;}
+    await fbEnsureTab(sid);
+    const existing=await fbExistingKeys(sid);
+    const rows=[];let dup=0;
+    athletes.forEach(a=>{
+      const key=sessionId+'|'+a.bib;
+      if(existing.has(key)){dup++;return;}
+      rows.push(fbAthleteRow(a,sessionId));
+      existing.add(key);
+    });
+    if(rows.length){
+      const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(FB_TAB+'!A1')}:append?valueInputOption=USER_ENTERED`,{
+        method:'POST',
+        headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+        body:JSON.stringify({values:rows})
+      });
+      if(!r.ok)throw new Error('Sheets HTTP '+r.status);
+    }
+    showToast('✓ Firebase → Sheets: '+rows.length+' nuevos · '+dup+' ya importados');
+    if(document.getElementById('tab-firebase')?.classList.contains('active'))renderFirebaseView();
+  }catch(e){
+    console.warn('Firebase import failed:',e);
+    if(String(e.message).includes('401'))showToast('Sesión expirada — reconecta Google',true);
+    else showToast('Error al importar de Firebase: '+e.message,true);
+  }
+}
+
+// Normaliza arreglo u objeto indexado {"0":...} de Firebase a arreglo
+function fbToArray(x){
+  if(x==null)return[];
+  if(Array.isArray(x))return x;
+  if(typeof x==='object')return Object.keys(x).filter(k=>/^\d+$/.test(k)).sort((a,b)=>a-b).map(k=>x[k]);
+  return[];
+}
+
+// Atleta → fila de 35 columnas (30 del formato tracker + SessionId,Bib,Cat,Rank,Finished)
+// Roxzones derivadas: los runs 1–7 quedan en 7/8 de su tiempo; la suma de sus 1/8
+// se reparte uniforme en las 7 roxzones. El Run 8 queda íntegro (sin roxzone final).
+// steps: 16 segmentos (pares=runs, impares=estaciones); ms es opcional.
+function fbAthleteRow(a,sessionId){
+  const steps=fbToArray(a.steps);
+  const rawRuns=[],rawStations=[];
+  for(let i=0;i<16;i++){
+    const ms=(steps[i]&&typeof steps[i].ms==='number')?steps[i].ms:null;
+    (i%2===0?rawRuns:rawStations).push(ms);
+  }
+  let runSumRawMs=0;
+  rawRuns.forEach((ms,i)=>{if(i<7&&ms!=null)runSumRawMs+=ms;});
+  const rzEachSec=Math.round(runSumRawMs/8/7/1000);
+  const runs=rawRuns.map((ms,i)=>ms==null?'':Math.round((i<7?ms*7/8:ms)/1000));
+  const stations=rawStations.map(ms=>ms==null?'':Math.round(ms/1000));
+  const roxzones=new Array(7).fill(rzEachSec);
+  const sum=arr=>arr.reduce((s,v)=>s+(v===''?0:v),0);
+  const runTotal=sum(runs),stationTotal=sum(stations),rzTotal=rzEachSec*7;
+  const total=runTotal+stationTotal+rzTotal;
+  const fecha=fmtDate(typeof a.startTs==='number'?a.startTs:Date.now());
+  return[fecha,a.name||'','',total,runTotal,stationTotal,rzTotal,
+    ...runs,...stations,...roxzones,
+    sessionId,a.bib!=null?a.bib:'',a.cat||'',a._rank!=null?a._rank:'',true];
+}
+
+// Crea la pestaña 'Firebase' con encabezados si no existe (no toca 'Hyrox')
+async function fbEnsureTab(sid){
+  const mr=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}?fields=sheets.properties`,{
+    headers:{Authorization:'Bearer '+oauthToken}});
+  if(!mr.ok)throw new Error('Sheets HTTP '+mr.status);
+  const md=await mr.json();
+  if((md.sheets||[]).some(s=>s.properties.title===FB_TAB))return;
+  const br=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}:batchUpdate`,{
+    method:'POST',headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+    body:JSON.stringify({requests:[{addSheet:{properties:{title:FB_TAB}}}]})});
+  if(!br.ok)throw new Error('No se pudo crear la pestaña '+FB_TAB);
+  await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(FB_TAB+'!A1')}:append?valueInputOption=RAW`,{
+    method:'POST',headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+    body:JSON.stringify({values:[FB_TAB_HEADERS]})});
+}
+
+// Lee todas las filas de la pestaña Firebase (sin encabezado)
+async function fbReadTab(sid){
+  const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(FB_TAB+'!A2:AI10000')}`,{
+    headers:{Authorization:'Bearer '+oauthToken}});
+  if(r.status===400)return[];// la pestaña no existe todavía
+  if(!r.ok)throw new Error('Sheets HTTP '+r.status);
+  const d=await r.json();
+  return d.values||[];
+}
+
+// Claves SessionId|Bib ya presentes (dedup). Col 30=SessionId, 31=Bib
+async function fbExistingKeys(sid){
+  const rows=await fbReadTab(sid);
+  return new Set(rows.filter(r=>r[30]).map(r=>r[30]+'|'+r[31]));
+}
+
+// ── VISTA FIREBASE (leaderboard por sesión, solo lectura) ──
+let fbOpenCards={};
+async function renderFirebaseView(){
+  const list=document.getElementById('firebase-list');
+  if(!list)return;
+  const countEl=document.getElementById('firebase-count');
+  if(getAuthMethod()!=='oauth'||!oauthToken||!getOAuthSheetId()){
+    list.innerHTML='<div class="history-empty">Conéctate con Google para ver los resultados de Firebase.</div>';
+    if(countEl)countEl.textContent='—';
+    return;
+  }
+  list.innerHTML='<div class="history-empty">Cargando resultados…</div>';
+  let rows;
+  try{rows=await fbReadTab(getOAuthSheetId());}
+  catch(e){list.innerHTML='<div class="history-empty">Error al leer la hoja: '+e.message+'</div>';return;}
+  if(!rows.length){
+    list.innerHTML='<div class="history-empty">Aún no hay resultados importados.<br>Usa el botón <strong>🔥 Firebase</strong> de la barra de sync para importar una sesión.</div>';
+    if(countEl)countEl.textContent='0 resultados';
+    return;
+  }
+  const sessions=new Map();
+  rows.forEach(r=>{
+    const s=r[30]||'(sin sesión)';
+    if(!sessions.has(s))sessions.set(s,[]);
+    sessions.get(s).push(r);
+  });
+  if(countEl)countEl.textContent=rows.length+' resultado'+(rows.length!==1?'s':'')+' · '+sessions.size+' sesión'+(sessions.size!==1?'es':'');
+  const allItems=[...RUNS,...STATIONS,...ROXZONES];
+  list.innerHTML='';
+  sessions.forEach((athletes,sessionId)=>{
+    const head=document.createElement('div');
+    head.style.cssText="margin:18px 0 8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);";
+    head.textContent='🔥 '+sessionId+' · '+((athletes[0]&&athletes[0][0])||'');
+    list.appendChild(head);
+    athletes.sort((a,b)=>((parseInt(a[33])||999)-(parseInt(b[33])||999))||((parseInt(a[31])||0)-(parseInt(b[31])||0)));
+    athletes.forEach(r=>{
+      const key=String(sessionId+'_'+(r[31]||'')).replace(/[^\w-]/g,'_');
+      const rank=parseInt(r[33]);
+      const num=i=>parseFloat(r[i])||0;
+      const secs=[];for(let i=7;i<30;i++)secs.push(num(i));
+      const card=document.createElement('div');
+      card.className='race-card'+(fbOpenCards[key]?' selected':'');
+      card.id='fb-card-'+key;
+      card.innerHTML=`
+        <div class="race-card-header" onclick="fbToggleCard('${key}')">
+          <span class="race-pos">${rank&&rank!==999?'#'+rank:'—'}</span>
+          <span class="race-date">Bib ${r[31]||'—'}</span>
+          <span class="race-name">${r[1]||'—'} <span style="font-size:0.65rem;color:var(--muted);margin-left:4px;">${r[32]||''}</span></span>
+          <div class="race-splits">
+            <span class="race-split">Run <span>${secToMmss(num(4))}</span></span>
+            <span class="race-split">WS <span>${secToMmss(num(5))}</span></span>
+            <span class="race-split">RZ <span>${secToMmss(num(6))}</span></span>
+          </div>
+          <span class="race-total">${secToHmmss(num(3))}</span>
+        </div>
+        <div class="race-detail ${fbOpenCards[key]?'open':''}" id="fb-detail-${key}">
+          <div class="detail-grid">
+            ${allItems.map((item,i)=>`<div class="detail-cell"><div class="detail-label">${item.name}</div><div class="detail-val">${secs[i]>0?secToMmss(secs[i]):'--:--'}</div></div>`).join('')}
+          </div>
+        </div>`;
+      list.appendChild(card);
+    });
+  });
+}
+function fbToggleCard(key){
+  fbOpenCards[key]=!fbOpenCards[key];
+  document.getElementById('fb-detail-'+key)?.classList.toggle('open',!!fbOpenCards[key]);
+  document.getElementById('fb-card-'+key)?.classList.toggle('selected',!!fbOpenCards[key]);
 }
 
 async function syncPendingToSheets(){
@@ -1695,6 +1898,7 @@ function switchTab(tab,btn){
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');
   if(tab==='history')renderHistory();
+  if(tab==='firebase')renderFirebaseView();
 }
 
 // ── BUILD ROWS ────────────────────────────────────────────
