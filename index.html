@@ -707,7 +707,6 @@
   <div class="history-panel">
     <div class="history-header">
       <span class="history-count" id="firebase-count">—</span>
-      <button class="btn gs" style="font-size:0.68rem;padding:5px 11px;" onclick="importFromFirebase()">🔥 Importar sesión</button>
       <button class="btn" style="font-size:0.68rem;padding:5px 11px;" onclick="renderFirebaseView()">↻ Actualizar</button>
     </div>
     <div id="firebase-list"></div>
@@ -1346,6 +1345,7 @@ async function fbExistingKeys(sid){
 
 // ── VISTA FIREBASE (leaderboard por sesión, solo lectura) ──
 let fbOpenCards={};
+let fbRowsCache={};
 async function renderFirebaseView(){
   const list=document.getElementById('firebase-list');
   if(!list)return;
@@ -1373,6 +1373,7 @@ async function renderFirebaseView(){
   if(countEl)countEl.textContent=rows.length+' resultado'+(rows.length!==1?'s':'')+' · '+sessions.size+' sesión'+(sessions.size!==1?'es':'');
   const allItems=[...RUNS,...STATIONS,...ROXZONES];
   list.innerHTML='';
+  fbRowsCache={};
   sessions.forEach((athletes,sessionId)=>{
     const head=document.createElement('div');
     head.style.cssText="margin:18px 0 8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);";
@@ -1381,6 +1382,7 @@ async function renderFirebaseView(){
     athletes.sort((a,b)=>((parseInt(a[33])||999)-(parseInt(b[33])||999))||((parseInt(a[31])||0)-(parseInt(b[31])||0)));
     athletes.forEach(r=>{
       const key=String(sessionId+'_'+(r[31]||'')).replace(/[^\w-]/g,'_');
+      fbRowsCache[key]=r;
       const rank=parseInt(r[33]);
       const num=i=>parseFloat(r[i])||0;
       const secs=[];for(let i=7;i<30;i++)secs.push(num(i));
@@ -1398,6 +1400,10 @@ async function renderFirebaseView(){
             <span class="race-split">RZ <span>${secToMmss(num(6))}</span></span>
           </div>
           <span class="race-total">${secToHmmss(num(3))}</span>
+          <div class="race-actions">
+            <button class="race-btn" onclick="event.stopPropagation();fbLoadRow('${key}')">Cargar</button>
+            <button class="race-btn" onclick="event.stopPropagation();fbCopyJson('${key}')" title="Copiar JSON para abrir en Viewer">📋 JSON</button>
+          </div>
         </div>
         <div class="race-detail ${fbOpenCards[key]?'open':''}" id="fb-detail-${key}">
           <div class="detail-grid">
@@ -1412,6 +1418,84 @@ function fbToggleCard(key){
   fbOpenCards[key]=!fbOpenCards[key];
   document.getElementById('fb-detail-'+key)?.classList.toggle('open',!!fbOpenCards[key]);
   document.getElementById('fb-card-'+key)?.classList.toggle('selected',!!fbOpenCards[key]);
+}
+
+// Fecha "31 jul 2025" (fmtDate es-MX) → ISO "2025-07-31"; si no parsea, hoy
+function fbParseFecha(str){
+  const MES={ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,oct:9,nov:10,dic:11};
+  const m=String(str||'').toLowerCase().replace(/\./g,'').match(/(\d{1,2})\s+([a-z]{3})\w*\s+(\d{4})/);
+  if(m&&MES[m[2]]!==undefined)return new Date(m[3],MES[m[2]],m[1]);
+  const d=new Date(str);
+  return isNaN(d)?new Date():d;
+}
+
+// Cargar un resultado de Firebase en el Tracker (igual que loadRace del histórico)
+function fbLoadRow(key){
+  const r=fbRowsCache[key];
+  if(!r){showToast('Resultado no encontrado — actualiza la vista',true);return;}
+  const num=i=>parseFloat(r[i])||0;
+  resetAll(false);
+  for(let i=0;i<8;i++){if(r[7+i]!==''&&r[7+i]!=null)setSec('r'+(i+1),num(7+i));}
+  for(let i=0;i<8;i++){if(r[15+i]!==''&&r[15+i]!=null)setSec('s'+(i+1),num(15+i));}
+  for(let i=0;i<7;i++){if(r[23+i]!==''&&r[23+i]!=null)setSec('rz'+(i+1),num(23+i));}
+  setSec('rz8',0);document.getElementById('rz8_m')&&(document.getElementById('rz8_m').value='');document.getElementById('rz8_s')&&(document.getElementById('rz8_s').value='');
+  setPreset(parseInt(r[2])||75);onUpdate();
+  loadedRaceId=null;
+  clearUnsaved();
+  const bar=document.getElementById('activity-bar');
+  const nameEl=document.getElementById('activity-name');
+  const metaEl=document.getElementById('activity-meta');
+  const dispName=(r[1]||'Atleta')+' · Bib '+(r[31]||'—');
+  if(bar&&nameEl){
+    nameEl.textContent=dispName;
+    if(metaEl)metaEl.textContent=(r[0]||'')+' · Cargada de Firebase ('+(r[30]||'')+')';
+    bar.classList.add('visible');
+  }
+  document.querySelectorAll('.main-tab')[0].click();
+  showToast('"'+dispName+'" cargada desde Firebase');
+}
+
+// Copiar/descargar JSON de un resultado de Firebase (igual que copyRaceJson)
+async function fbCopyJson(key){
+  const r=fbRowsCache[key];
+  if(!r){showToast('Resultado no encontrado — actualiza la vista',true);return;}
+  const num=i=>parseFloat(r[i])||0;
+  const nombre=(r[1]||'Atleta')+' (Bib '+(r[31]||'—')+' · '+(r[30]||'')+')';
+  const fechaIso=fbParseFecha(r[0]).toISOString().slice(0,10);
+  const data={
+    nombre,
+    fecha:fechaIso,
+    objetivo:parseInt(r[2])||75,
+    runs:Array.from({length:8},(_,i)=>num(7+i)),
+    estaciones:Array.from({length:8},(_,i)=>num(15+i)),
+    roxzones:Array.from({length:7},(_,i)=>num(23+i))
+  };
+  const json=JSON.stringify(data,null,2);
+  let copied=false;
+  try{
+    await navigator.clipboard.writeText(json);
+    copied=true;
+  }catch(e){
+    const ta=document.createElement('textarea');
+    ta.value=json;document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');copied=true;}catch(e2){}
+    document.body.removeChild(ta);
+  }
+  try{
+    const safeName=nombre.replace(/[^a-zA-Z0-9_-]/g,'_').slice(0,40);
+    const filename=`hyrox_${safeName}_${fechaIso}.txt`;
+    const blob=new Blob([json],{type:'text/plain'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},100);
+    showToast(copied?'✓ JSON copiado y descargado como .txt':'✓ JSON descargado como .txt');
+  }catch(e){
+    if(copied)showToast('✓ JSON copiado al portapapeles');
+    else showToast('No se pudo copiar/descargar — abre la consola',true);
+    console.log(json);
+  }
 }
 
 async function syncPendingToSheets(){
