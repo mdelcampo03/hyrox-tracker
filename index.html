@@ -708,6 +708,7 @@
     <div class="history-header">
       <span class="history-count" id="firebase-count">—</span>
       <button class="btn" style="font-size:0.68rem;padding:5px 11px;" onclick="renderFirebaseView()">↻ Actualizar</button>
+      <button class="btn" id="fb-clear-all-btn" style="font-size:0.68rem;padding:5px 11px;border-color:rgba(255,77,106,0.4);color:var(--err);display:none;" onclick="fbDeleteAll()" title="Eliminar todos los resultados de la pestaña Firebase de tu hoja">🗑 Vaciar sección</button>
     </div>
     <div id="firebase-list"></div>
   </div>
@@ -1350,6 +1351,8 @@ async function renderFirebaseView(){
   const list=document.getElementById('firebase-list');
   if(!list)return;
   const countEl=document.getElementById('firebase-count');
+  const clearBtn=document.getElementById('fb-clear-all-btn');
+  if(clearBtn)clearBtn.style.display='none';
   if(getAuthMethod()!=='oauth'||!oauthToken||!getOAuthSheetId()){
     list.innerHTML='<div class="history-empty">Conéctate con Google para ver los resultados de Firebase.</div>';
     if(countEl)countEl.textContent='—';
@@ -1371,6 +1374,7 @@ async function renderFirebaseView(){
     sessions.get(s).push(r);
   });
   if(countEl)countEl.textContent=rows.length+' resultado'+(rows.length!==1?'s':'')+' · '+sessions.size+' sesión'+(sessions.size!==1?'es':'');
+  if(clearBtn)clearBtn.style.display='';
   const allItems=[...RUNS,...STATIONS,...ROXZONES];
   list.innerHTML='';
   fbRowsCache={};
@@ -1403,6 +1407,7 @@ async function renderFirebaseView(){
           <div class="race-actions">
             <button class="race-btn" onclick="event.stopPropagation();fbLoadRow('${key}')">Cargar</button>
             <button class="race-btn" onclick="event.stopPropagation();fbCopyJson('${key}')" title="Copiar JSON para abrir en Viewer">📋 JSON</button>
+            <button class="race-btn del" onclick="event.stopPropagation();fbDeleteAthlete('${key}')" title="Eliminar este resultado de la hoja">✕</button>
           </div>
         </div>
         <div class="race-detail ${fbOpenCards[key]?'open':''}" id="fb-detail-${key}">
@@ -1495,6 +1500,76 @@ async function fbCopyJson(key){
     if(copied)showToast('✓ JSON copiado al portapapeles');
     else showToast('No se pudo copiar/descargar — abre la consola',true);
     console.log(json);
+  }
+}
+
+// ── BORRADO DE RESULTADOS FIREBASE (pestaña 'Firebase' de la hoja) ──
+// Solo modo OAuth: la vista Firebase requiere token OAuth para leer/escribir.
+// Devuelve el sheetId numérico (gid) de una pestaña por su título.
+async function fbGetTabGid(sid,title){
+  const meta=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}?fields=sheets.properties`,{
+    headers:{Authorization:'Bearer '+oauthToken}});
+  if(!meta.ok)throw new Error('Sheets HTTP '+meta.status);
+  const md=await meta.json();
+  const tab=(md.sheets||[]).find(s=>s.properties.title===title);
+  if(!tab)throw new Error('Pestaña '+title+' no encontrada');
+  return tab.properties.sheetId;
+}
+
+// Eliminar UN resultado (una fila) de la pestaña Firebase.
+async function fbDeleteAthlete(key){
+  if(getAuthMethod()!=='oauth'||!oauthToken){showToast('Requiere conexión OAuth con Google',true);return;}
+  const sid=getOAuthSheetId();
+  if(!sid){showToast('No hay hoja OAuth conectada',true);return;}
+  const r=fbRowsCache[key];
+  if(!r){showToast('Resultado no encontrado — actualiza la vista',true);return;}
+  const disp=(r[1]||'Atleta')+' · Bib '+(r[31]||'—');
+  if(!confirm(`¿Eliminar permanentemente "${disp}" de la sesión "${r[30]||''}"?\n\nSe borra la fila de la pestaña Firebase de tu Google Sheet.\nEsta acción no se puede deshacer.`))return;
+  showToast('Eliminando "'+disp+'"…');
+  try{
+    // Releer para obtener el índice real de la fila (por si cambió la hoja)
+    const rows=await fbReadTab(sid);
+    const idx=rows.findIndex(x=>
+      String(x[30]||'')===String(r[30]||'')&&
+      String(x[31]||'')===String(r[31]||'')&&
+      String(x[1]||'')===String(r[1]||'')&&
+      String(x[3]||'')===String(r[3]||''));
+    if(idx<0){showToast('No se encontró la fila en la hoja — actualiza la vista',true);renderFirebaseView();return;}
+    const gid=await fbGetTabGid(sid,FB_TAB);
+    // rows[] arranca en A2, así que fila rows[idx] = índice de dimensión idx+1 (0-based; el header es 0)
+    const del=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}:batchUpdate`,{
+      method:'POST',headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+      body:JSON.stringify({requests:[{deleteDimension:{range:{sheetId:gid,dimension:'ROWS',startIndex:idx+1,endIndex:idx+2}}}]})});
+    if(!del.ok)throw new Error('HTTP '+del.status);
+    delete fbOpenCards[key];
+    showToast('✓ "'+disp+'" eliminado');
+    renderFirebaseView();
+  }catch(e){
+    console.warn('fbDeleteAthlete failed:',e);
+    showToast('Error al eliminar: '+e.message,true);
+  }
+}
+
+// Vaciar TODA la sección Firebase: limpia las filas de datos (conserva el encabezado).
+async function fbDeleteAll(){
+  if(getAuthMethod()!=='oauth'||!oauthToken){showToast('Requiere conexión OAuth con Google',true);return;}
+  const sid=getOAuthSheetId();
+  if(!sid){showToast('No hay hoja OAuth conectada',true);return;}
+  let total=0;
+  try{total=(await fbReadTab(sid)).length;}catch(e){}
+  if(!total){showToast('No hay resultados que eliminar');renderFirebaseView();return;}
+  if(!confirm(`¿Vaciar TODA la sección Firebase?\n\nSe eliminan ${total} resultado${total!==1?'s':''} de la pestaña Firebase de tu Google Sheet (se conserva el encabezado).\nEsta acción no se puede deshacer.`))return;
+  showToast('Vaciando sección Firebase…');
+  try{
+    const clr=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(FB_TAB+'!A2:AI10000')}:clear`,{
+      method:'POST',headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},body:'{}'});
+    if(!clr.ok)throw new Error('HTTP '+clr.status);
+    fbOpenCards={};fbRowsCache={};
+    showToast('✓ Sección Firebase vaciada ('+total+' eliminado'+(total!==1?'s':'')+')');
+    renderFirebaseView();
+  }catch(e){
+    console.warn('fbDeleteAll failed:',e);
+    showToast('Error al vaciar: '+e.message,true);
   }
 }
 
