@@ -137,6 +137,12 @@
   .main-tab{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:12px 18px;background:transparent;border:none;color:var(--faint);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
   .main-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
   .tab-panel{display:none;}.tab-panel.active{display:block;}
+  /* sub-vistas dentro de Histórico */
+  .subtabs{display:inline-flex;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px;margin-bottom:16px;}
+  .subtab{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:7px 16px;background:transparent;border:none;border-radius:4px;color:var(--muted);cursor:pointer;transition:all .15s;}
+  .subtab:hover{color:var(--text);}
+  .subtab.active{background:var(--surface3);color:var(--accent);}
+  .hview{display:none;}.hview.active{display:block;}
 
   /* ── TRACKER LAYOUT ── */
   .main{display:grid;grid-template-columns:1fr 360px;}
@@ -605,7 +611,6 @@
 <div class="main-tabs">
   <button class="main-tab active" onclick="switchTab('tracker',this)">Tracker</button>
   <button class="main-tab" onclick="switchTab('history',this)">Histórico <span id="history-badge" style="font-size:0.65rem;color:var(--muted);"></span></button>
-  <button class="main-tab" onclick="switchTab('firebase',this)">🔥 Firebase</button>
 </div>
 
 <!-- TAB TRACKER -->
@@ -702,32 +707,38 @@
   </div>
 </div>
 
-<!-- TAB HISTÓRICO -->
+<!-- TAB HISTÓRICO (incluye sub-vista Cronómetro, antes tab Firebase) -->
 <div id="tab-history" class="tab-panel">
   <div class="history-panel">
-    <div class="history-header">
-      <span class="history-count" id="history-count">—</span>
-      <button class="btn gs" style="font-size:0.68rem;padding:5px 11px;" onclick="pullFromSheets()">↓ Importar de Sheets</button>
-      <button class="btn gs" style="font-size:0.68rem;padding:5px 11px;" onclick="syncPendingToSheets()">↑ Sync pendientes</button>
-      <button class="btn" style="font-size:0.68rem;padding:5px 11px;" onclick="clearHistory()">Borrar todo</button>
+    <div class="subtabs">
+      <button class="subtab active" id="hsub-races" onclick="switchHistoryView('races',this)">Mis carreras</button>
+      <button class="subtab" id="hsub-firebase" onclick="switchHistoryView('firebase',this)">Cronómetro</button>
     </div>
-    <div id="history-list"></div>
-    <div class="compare-section" id="compare-section" style="display:none;">
-      <div class="compare-title">Evolución — tiempo total por carrera</div>
-      <div class="compare-wrap"><canvas id="compareChart"></canvas></div>
-    </div>
-  </div>
-</div>
 
-<!-- TAB FIREBASE (resultados del cronómetro, solo lectura) -->
-<div id="tab-firebase" class="tab-panel">
-  <div class="history-panel">
-    <div class="history-header">
-      <span class="history-count" id="firebase-count">—</span>
-      <button class="btn" style="font-size:0.68rem;padding:5px 11px;" onclick="renderFirebaseView()">↻ Actualizar</button>
-      <button class="btn" id="fb-clear-all-btn" style="font-size:0.68rem;padding:5px 11px;border-color:rgba(255,77,106,0.4);color:var(--err);display:none;" onclick="fbDeleteAll()" title="Eliminar todos los resultados de la pestaña Firebase de tu hoja">🗑 Vaciar sección</button>
+    <!-- VISTA: MIS CARRERAS -->
+    <div id="hview-races" class="hview active">
+      <div class="history-header">
+        <span class="history-count" id="history-count">—</span>
+        <button class="btn gs" style="font-size:0.68rem;padding:5px 11px;" onclick="pullFromSheets()">↓ Importar de Sheets</button>
+        <button class="btn gs" style="font-size:0.68rem;padding:5px 11px;" onclick="syncPendingToSheets()">↑ Sync pendientes</button>
+        <button class="btn" style="font-size:0.68rem;padding:5px 11px;" onclick="clearHistory()">Borrar todo</button>
+      </div>
+      <div id="history-list"></div>
+      <div class="compare-section" id="compare-section" style="display:none;">
+        <div class="compare-title">Evolución — tiempo total por carrera</div>
+        <div class="compare-wrap"><canvas id="compareChart"></canvas></div>
+      </div>
     </div>
-    <div id="firebase-list"></div>
+
+    <!-- VISTA: CRONÓMETRO (resultados del cronómetro vía Firebase, solo lectura) -->
+    <div id="hview-firebase" class="hview">
+      <div class="history-header">
+        <span class="history-count" id="firebase-count">—</span>
+        <button class="btn" style="font-size:0.68rem;padding:5px 11px;" onclick="renderFirebaseView()">↻ Actualizar</button>
+        <button class="btn" id="fb-clear-all-btn" style="font-size:0.68rem;padding:5px 11px;border-color:rgba(255,77,106,0.4);color:var(--err);display:none;" onclick="fbDeleteAll()" title="Eliminar todos los resultados del cronómetro de tu hoja">🗑 Vaciar sección</button>
+      </div>
+      <div id="firebase-list"></div>
+    </div>
   </div>
 </div>
 
@@ -1308,7 +1319,7 @@ async function importFromFirebase(){
       if(!r.ok)throw new Error('Sheets HTTP '+r.status);
     }
     showToast('✓ Firebase → Sheets: '+rows.length+' nuevos · '+dup+' ya importados');
-    if(document.getElementById('tab-firebase')?.classList.contains('active'))renderFirebaseView();
+    if(document.getElementById('hview-firebase')?.classList.contains('active'))renderFirebaseView();
   }catch(e){
     console.warn('Firebase import failed:',e);
     if(String(e.message).includes('401'))showToast('Sesión expirada — reconecta Google',true);
@@ -2094,8 +2105,22 @@ function switchTab(tab,btn){
   document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');
-  if(tab==='history')renderHistory();
-  if(tab==='firebase')renderFirebaseView();
+  if(tab==='history'){
+    renderHistory();
+    const fbActive=document.getElementById('hview-firebase')?.classList.contains('active');
+    if(fbActive)renderFirebaseView();
+  }
+}
+
+// ── SUB-VISTAS DENTRO DE HISTÓRICO (Mis carreras / Cronómetro) ──
+function switchHistoryView(view,btn){
+  document.querySelectorAll('.subtab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.hview').forEach(p=>p.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  const panel=document.getElementById('hview-'+view);
+  if(panel)panel.classList.add('active');
+  if(view==='firebase')renderFirebaseView();
+  else renderHistory();
 }
 
 // ── BUILD ROWS ────────────────────────────────────────────
