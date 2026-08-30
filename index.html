@@ -531,7 +531,7 @@
         <div class="menu-group-label">Google Sheets</div>
         <button class="menu-item" id="config-btn" role="menuitem" onclick="closeSettingsMenu();openSheetSetup()">⚙ Conectar / cambiar Sheet</button>
         <button class="menu-item" id="pull-btn" role="menuitem" onclick="closeSettingsMenu();pullFromSheets()">↓ Importar de Sheets</button>
-        <button class="menu-item" id="fb-import-btn" role="menuitem" onclick="closeSettingsMenu();importFromFirebase()">🔥 Importar Firebase</button>
+        <button class="menu-item" id="fb-import-btn" role="menuitem" onclick="closeSettingsMenu();importFromFirebase()">🔥 Importar del cronómetro</button>
         <div class="menu-sep"></div>
         <button class="menu-item" role="menuitem" onclick="closeSettingsMenu();exportCSV()">⤓ Exportar CSV</button>
         <button class="menu-item danger" role="menuitem" onclick="closeSettingsMenu();resetAll()">⟲ Reiniciar todo</button>
@@ -735,7 +735,7 @@
       <div class="history-header">
         <span class="history-count" id="firebase-count">—</span>
         <button class="btn" style="font-size:0.68rem;padding:5px 11px;" onclick="renderFirebaseView()">↻ Actualizar</button>
-        <button class="btn" id="fb-clear-all-btn" style="font-size:0.68rem;padding:5px 11px;border-color:rgba(255,77,106,0.4);color:var(--err);display:none;" onclick="fbDeleteAll()" title="Eliminar todos los resultados del cronómetro de tu hoja">🗑 Vaciar sección</button>
+        <button class="btn" id="fb-clear-all-btn" style="font-size:0.68rem;padding:5px 11px;border-color:rgba(255,77,106,0.4);color:var(--err);display:none;" onclick="fbDeleteAll()" title="Eliminar TODAS las sesiones del cronómetro de tu hoja">🗑 Vaciar todo</button>
       </div>
       <div id="firebase-list"></div>
     </div>
@@ -1403,7 +1403,7 @@ async function renderFirebaseView(){
   const clearBtn=document.getElementById('fb-clear-all-btn');
   if(clearBtn)clearBtn.style.display='none';
   if(getAuthMethod()!=='oauth'||!oauthToken||!getOAuthSheetId()){
-    list.innerHTML='<div class="history-empty">Conéctate con Google para ver los resultados de Firebase.</div>';
+    list.innerHTML='<div class="history-empty">Conéctate con Google para ver los resultados del cronómetro.</div>';
     if(countEl)countEl.textContent='—';
     return;
   }
@@ -1412,7 +1412,7 @@ async function renderFirebaseView(){
   try{rows=await fbReadTab(getOAuthSheetId());}
   catch(e){list.innerHTML='<div class="history-empty">Error al leer la hoja: '+e.message+'</div>';return;}
   if(!rows.length){
-    list.innerHTML='<div class="history-empty">Aún no hay resultados importados.<br>Usa el botón <strong>🔥 Firebase</strong> de la barra de sync para importar una sesión.</div>';
+    list.innerHTML='<div class="history-empty">Aún no hay resultados importados.<br>Usa <strong>⚙ → 🔥 Importar del cronómetro</strong> para traer una sesión.</div>';
     if(countEl)countEl.textContent='0 resultados';
     return;
   }
@@ -1429,8 +1429,19 @@ async function renderFirebaseView(){
   fbRowsCache={};
   sessions.forEach((athletes,sessionId)=>{
     const head=document.createElement('div');
-    head.style.cssText="margin:18px 0 8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);";
-    head.textContent='🔥 '+sessionId+' · '+((athletes[0]&&athletes[0][0])||'');
+    head.style.cssText="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:18px 0 8px;";
+    const htitle=document.createElement('span');
+    htitle.style.cssText="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);flex:1;min-width:0;";
+    htitle.textContent='🔥 '+sessionId+' · '+((athletes[0]&&athletes[0][0])||'');
+    const hcount=document.createElement('span');
+    hcount.style.cssText="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--faint);white-space:nowrap;";
+    hcount.textContent=athletes.length+' resultado'+(athletes.length!==1?'s':'');
+    const hdel=document.createElement('button');
+    hdel.className='race-btn del';
+    hdel.textContent='🗑 Eliminar sesión';
+    hdel.title='Eliminar todos los resultados de esta sesión de tu Google Sheet';
+    hdel.onclick=()=>fbDeleteSession(sessionId);
+    head.appendChild(htitle);head.appendChild(hcount);head.appendChild(hdel);
     list.appendChild(head);
     athletes.sort((a,b)=>((parseInt(a[33])||999)-(parseInt(b[33])||999))||((parseInt(a[31])||0)-(parseInt(b[31])||0)));
     athletes.forEach(r=>{
@@ -1599,7 +1610,37 @@ async function fbDeleteAthlete(key){
   }
 }
 
-// Vaciar TODA la sección Firebase: limpia las filas de datos (conserva el encabezado).
+// Eliminar UNA sesión completa: borra todas las filas cuyo id de sesión (col 30) coincide.
+async function fbDeleteSession(sessionId){
+  if(getAuthMethod()!=='oauth'||!oauthToken){showToast('Requiere conexión OAuth con Google',true);return;}
+  const sid=getOAuthSheetId();
+  if(!sid){showToast('No hay hoja OAuth conectada',true);return;}
+  let rows;
+  try{rows=await fbReadTab(sid);}catch(e){showToast('Error al leer la hoja: '+e.message,true);return;}
+  const idxs=[];
+  rows.forEach((x,i)=>{ if(String(x[30]||'(sin sesión)')===String(sessionId))idxs.push(i); });
+  if(!idxs.length){showToast('No se encontró la sesión — actualiza la vista',true);renderFirebaseView();return;}
+  if(!confirm(`¿Eliminar la sesión "${sessionId}" completa?\n\nSe borran ${idxs.length} resultado${idxs.length!==1?'s':''} de la pestaña del cronómetro en tu Google Sheet.\nEsta acción no se puede deshacer.`))return;
+  showToast('Eliminando sesión "'+sessionId+'"…');
+  try{
+    const gid=await fbGetTabGid(sid,FB_TAB);
+    // Descendente: borrar de abajo hacia arriba para que los índices no se desfasen entre requests.
+    const requests=idxs.sort((a,b)=>b-a).map(i=>({deleteDimension:{range:{sheetId:gid,dimension:'ROWS',startIndex:i+1,endIndex:i+2}}}));
+    const del=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}:batchUpdate`,{
+      method:'POST',headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},
+      body:JSON.stringify({requests})});
+    if(!del.ok)throw new Error('HTTP '+del.status);
+    const pref=String(sessionId).replace(/[^\w-]/g,'_')+'_';
+    Object.keys(fbOpenCards).forEach(k=>{ if(k.startsWith(pref))delete fbOpenCards[k]; });
+    showToast('✓ Sesión "'+sessionId+'" eliminada ('+idxs.length+' resultado'+(idxs.length!==1?'s':'')+')');
+    renderFirebaseView();
+  }catch(e){
+    console.warn('fbDeleteSession failed:',e);
+    showToast('Error al eliminar la sesión: '+e.message,true);
+  }
+}
+
+// Vaciar TODAS las sesiones del cronómetro: limpia las filas de datos (conserva el encabezado).
 async function fbDeleteAll(){
   if(getAuthMethod()!=='oauth'||!oauthToken){showToast('Requiere conexión OAuth con Google',true);return;}
   const sid=getOAuthSheetId();
@@ -1607,14 +1648,14 @@ async function fbDeleteAll(){
   let total=0;
   try{total=(await fbReadTab(sid)).length;}catch(e){}
   if(!total){showToast('No hay resultados que eliminar');renderFirebaseView();return;}
-  if(!confirm(`¿Vaciar TODA la sección Firebase?\n\nSe eliminan ${total} resultado${total!==1?'s':''} de la pestaña Firebase de tu Google Sheet (se conserva el encabezado).\nEsta acción no se puede deshacer.`))return;
-  showToast('Vaciando sección Firebase…');
+  if(!confirm(`¿Vaciar TODAS las sesiones del cronómetro?\n\nSe eliminan ${total} resultado${total!==1?'s':''} de la pestaña del cronómetro en tu Google Sheet (se conserva el encabezado).\nEsta acción no se puede deshacer.`))return;
+  showToast('Vaciando todas las sesiones del cronómetro…');
   try{
     const clr=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(FB_TAB+'!A2:AI10000')}:clear`,{
       method:'POST',headers:{Authorization:'Bearer '+oauthToken,'Content-Type':'application/json'},body:'{}'});
     if(!clr.ok)throw new Error('HTTP '+clr.status);
     fbOpenCards={};fbRowsCache={};
-    showToast('✓ Sección Firebase vaciada ('+total+' eliminado'+(total!==1?'s':'')+')');
+    showToast('✓ Todas las sesiones del cronómetro eliminadas ('+total+' resultado'+(total!==1?'s':'')+')');
     renderFirebaseView();
   }catch(e){
     console.warn('fbDeleteAll failed:',e);
