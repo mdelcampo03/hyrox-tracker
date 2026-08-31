@@ -96,6 +96,14 @@
   .drop-text span{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
   .import-status{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap;flex-shrink:0;}
   .import-status.ok{color:var(--gs);}.import-status.err{color:var(--err);}.import-status.loading{color:var(--accent);}
+  /* métodos secundarios de captura (fallback discreto bajo el drop-area) */
+  .import-alt{padding:8px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface);}
+  .import-alt-q{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);}
+  .import-alt-link{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:transparent;border:none;color:var(--muted);cursor:pointer;padding:4px 4px;transition:color .15s;}
+  .import-alt-link:hover{color:var(--accent);}
+  .import-alt-sep{color:var(--faint);}
+  .input-panel.flash{animation:panelflash 1.2s ease;}
+  @keyframes panelflash{0%,100%{box-shadow:none;}20%,60%{box-shadow:inset 0 0 0 2px var(--accent);}}
   .parse-log{padding:8px 32px;background:var(--surface);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);display:none;max-height:60px;overflow-y:auto;border-bottom:1px solid var(--border);}
 
   /* ── UNSAVED BAR ── */
@@ -579,9 +587,11 @@
     </div>
     <div class="import-status" id="importStatus">Sin archivo</div>
   </div>
-  <div style="padding:10px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);position:relative;z-index:5;">
-    <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--faint);">o pega los splits de Garmin</span>
-    <button type="button" class="btn" style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:6px 14px;border-radius:2px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;position:relative;z-index:5;" onclick="event.stopPropagation();openSplitConverter();return false;">📋 Pegar tabla de splits</button>
+  <div class="import-alt">
+    <span class="import-alt-q">¿Sin archivo?</span>
+    <button type="button" class="import-alt-link" onclick="event.stopPropagation();openSplitConverter();return false;">📋 Pega la tabla de splits</button>
+    <span class="import-alt-sep">·</span>
+    <button type="button" class="import-alt-link" onclick="event.stopPropagation();focusManualEntry();return false;">✏️ Captura manual</button>
   </div>
 </div>
 <div class="parse-log" id="parseLog"></div>
@@ -2216,6 +2226,21 @@ async function initGarminHelp(){
   if(stored==='1'){garminHelpUserSet=true;setGarminHelp(false);}
   else if(stored==='0'){garminHelpUserSet=true;setGarminHelp(true);}
   else setGarminHelp(true); // default: expandido para primerizos
+}
+
+// ── CAPTURA MANUAL: llevar al panel de splits y enfocar el primer campo ──
+function focusManualEntry(){
+  // Asegura estar en la pestaña Tracker (donde vive el panel)
+  const trackerTab=document.querySelector('.main-tab');
+  if(trackerTab&&!document.getElementById('tab-tracker')?.classList.contains('active'))trackerTab.click();
+  const panel=document.querySelector('.input-panel');
+  if(!panel)return;
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+  panel.classList.remove('flash');void panel.offsetWidth; // reinicia la animación
+  panel.classList.add('flash');
+  setTimeout(()=>panel.classList.remove('flash'),1300);
+  const first=document.getElementById('r1_m');
+  if(first)setTimeout(()=>{try{first.focus();}catch(e){}},350);
 }
 
 // ── BUILD ROWS ────────────────────────────────────────────
