@@ -155,6 +155,25 @@
   /* ── TRACKER LAYOUT ── */
   .main{display:grid;grid-template-columns:1fr 360px;}
   @media(max-width:900px){.main{grid-template-columns:1fr;}}
+  /* estado vacío: sin datos, una sola columna y CTA en vez de placeholders */
+  #empty-state{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;padding:56px 24px;}
+  #empty-state .es-icon{font-size:2.4rem;opacity:0.55;}
+  #empty-state .es-title{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.15rem;color:var(--text);letter-spacing:0.01em;}
+  #empty-state .es-text{font-family:'Inter Tight',sans-serif;font-size:0.86rem;color:var(--muted);max-width:420px;line-height:1.5;}
+  #empty-state .es-text strong{color:var(--run);}
+  #empty-state .es-btn{margin-top:6px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:9px 16px;border-radius:3px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:border-color .15s,color .15s;}
+  #empty-state .es-btn:hover{border-color:var(--accent);color:var(--accent);}
+  .main.no-data{grid-template-columns:1fr;}
+  .main.no-data .input-panel{display:none;}
+  .main.no-data #empty-state{display:flex;}
+  .main.no-data .section-label,
+  .main.no-data .metric-strip,
+  .main.no-data .chart-tabs,
+  .main.no-data .radar-toggles,
+  .main.no-data .chart-wrap,
+  .main.no-data .legend,
+  .main.no-data .pace-bar-wrap,
+  .main.no-data .deg-panel{display:none;}
   .chart-area{padding:24px 32px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:16px;}
 
   /* Section labels like reference */
@@ -639,12 +658,20 @@
 
 <!-- TAB TRACKER -->
 <div id="tab-tracker" class="tab-panel active">
-  <div class="main">
+  <div class="main no-data">
     <div class="chart-area">
       <!-- Activity name display -->
       <div class="activity-bar" id="activity-bar">
         <span class="activity-name" id="activity-name"></span>
         <span class="activity-meta" id="activity-meta"></span>
+      </div>
+
+      <!-- ESTADO VACÍO (sin carrera cargada) -->
+      <div id="empty-state">
+        <div class="es-icon">📊</div>
+        <div class="es-title">Aún no has cargado una carrera</div>
+        <div class="es-text">Arrastra tu archivo <strong>.fit</strong> arriba, pega la tabla de splits, o captúrala a mano.</div>
+        <button class="es-btn" onclick="focusManualEntry()">✏️ Captura manual</button>
       </div>
 
       <div class="section-label">Resumen</div>
@@ -2190,7 +2217,7 @@ function switchHistoryView(view,btn){
 }
 
 // ── AYUDA GARMIN COLAPSABLE (permanente → colapsable + auto-colapsa con datos) ──
-let garminHelpUserSet=false, garminAutoCollapsed=false;
+let garminHelpUserSet=false, garminAutoCollapsed=false, manualMode=false;
 function setGarminHelp(open){
   const strip=document.getElementById('garmin-strip');
   const chev=document.getElementById('garmin-chev');
@@ -2233,6 +2260,9 @@ function focusManualEntry(){
   // Asegura estar en la pestaña Tracker (donde vive el panel)
   const trackerTab=document.querySelector('.main-tab');
   if(trackerTab&&!document.getElementById('tab-tracker')?.classList.contains('active'))trackerTab.click();
+  // Revela el panel aunque no haya datos (sale del estado vacío)
+  manualMode=true;
+  document.querySelector('.main')?.classList.remove('no-data');
   const panel=document.querySelector('.input-panel');
   if(!panel)return;
   panel.scrollIntoView({behavior:'smooth',block:'start'});
@@ -3116,6 +3146,7 @@ function onUpdate(){
   const rs=RUNS.map(r=>getSec(r.id)),ss=STATIONS.map(s=>getSec(s.id)),rzs=ROXZONES.map(r=>getSec(r.id));
   const rt=rs.reduce((a,b)=>a+b,0),st=ss.reduce((a,b)=>a+b,0),rzt=rzs.reduce((a,b)=>a+b,0),tot=rt+st+rzt;
   maybeAutoCollapseGarmin(tot>0);
+  document.querySelector('.main')?.classList.toggle('no-data', tot===0 && !manualMode);
   const tgt=getCurrentTargetSec();
   // Si el preset actual no existe (ej: avg sin historial), fallback a 75
   const preset=PRESET_TARGETS[currentPreset]||PRESET_TARGETS[75];
@@ -3460,6 +3491,7 @@ async function updateRaceInSheets(raceId,rs,ss,rzs,rt,st,rzt,tot){
 }
 
 function resetAll(updateUI=true){
+  manualMode=false; // vuelve al estado vacío limpio
   [...RUNS,...STATIONS,...ROXZONES].forEach(item=>['_m','_s'].forEach(suf=>{const el=document.getElementById(item.id+suf);if(el){el.value='';el.classList.remove('filled');}}));
   clearUnsaved();loadedRaceId=null;
   document.getElementById('activity-bar')?.classList.remove('visible');
