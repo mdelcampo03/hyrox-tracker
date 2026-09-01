@@ -24,7 +24,7 @@
   :root{
     --bg:#0a0a0b;--surface:#131316;--surface2:#1c1c20;--surface3:#242428;
     --accent:#e8ff00;--accent-dim:#d4e800;
-    --text:#f5f5f4;--muted:#a1a1a1;--faint:#6b6b6b;
+    --text:#f5f5f4;--muted:#a1a1a1;--faint:#8a8a8a;
     --border:#2a2a30;--border-hot:#e8ff00;
     --run:#4d9fff;--station:#99ff66;--roxzone:#b5b5b0;--gs:#34a853;
     --warn:#ffb84d;--err:#ff4d6a;
@@ -121,6 +121,17 @@
   /* ── TARGET BAR ── */
   .target-bar{padding:10px 32px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .target-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap;}
+  /* Objetivo compacto: pill + popover con todos los presets */
+  .preset-wrap{position:relative;}
+  .preset-trigger{display:inline-flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;letter-spacing:0.04em;padding:7px 12px;border-radius:3px;border:1px solid rgba(232,255,0,0.4);background:rgba(232,255,0,0.06);color:var(--accent);cursor:pointer;transition:border-color .15s;white-space:nowrap;}
+  .preset-trigger:hover{border-color:var(--accent);}
+  .preset-trigger .pt-chev{font-size:0.65rem;color:var(--faint);}
+  .preset-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:60;background:var(--surface2);border:1px solid var(--border);border-radius:6px;box-shadow:0 12px 32px rgba(0,0,0,0.55);padding:10px;width:min(360px,92vw);display:none;}
+  .preset-pop.open{display:block;}
+  .preset-pop .preset-row{display:grid;grid-template-columns:1fr 1fr;gap:5px;width:auto;align-items:stretch;}
+  .preset-pop .preset-btn{width:100%;text-align:center;}
+  .preset-pop .custom-target-wrap{grid-column:1 / -1;justify-content:center;height:32px;}
+  .target-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
   .preset-row{display:flex;gap:4px;flex-wrap:wrap;align-items:center;}
   .custom-target-wrap{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--border);border-radius:2px;padding:2px;background:transparent;height:28px;position:relative;}
   .custom-target-wrap:hover{border-color:var(--accent);}
@@ -626,6 +637,12 @@
 
 <div class="target-bar">
   <span class="target-label">Objetivo</span>
+  <div class="preset-wrap">
+    <button class="preset-trigger" id="preset-trigger" onclick="togglePresetPop(event)" aria-haspopup="true" aria-expanded="false" title="Elegir objetivo">
+      <span id="preset-trigger-label">🥇 1h 15m</span>
+      <span class="pt-chev">▾</span>
+    </button>
+    <div class="preset-pop" id="preset-pop" role="menu">
   <div class="preset-row">
     <button class="preset-btn" id="preset-60" onclick="setPreset(60)" data-cat="Élite+">🔥 1h 00m</button>
     <button class="preset-btn" id="preset-65" onclick="setPreset(65)" data-cat="Élite">🔥 1h 05m</button>
@@ -644,11 +661,15 @@
       <button class="custom-target-apply" onclick="applyCustomTarget()">→</button>
     </div>
   </div>
+    </div>
+  </div>
   <span class="target-label">→ <span class="target-display" id="tgt-display">1:15:00</span></span>
   <div class="target-gap neutral" id="tgt-gap">— sin datos</div>
-  <button class="btn" style="margin-left:8px;border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="openRacePlan()" title="Generar plan de carrera basado en el objetivo actual">🗓 Race Plan</button>
-  <button class="btn" style="border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="openLimitingSegment()" title="Analizar qué segmentos te cuestan más tiempo">🎯 Segmento Limitante</button>
-  <button class="btn" style="border-color:rgba(232,255,0,0.3);color:var(--accent);font-size:10px;padding:6px 12px;" onclick="exportFullRacePDF()" title="Exportar análisis completo de la carrera a PDF (apto para imprimir)">📄 PDF Carrera</button>
+  <div class="target-actions">
+    <button class="btn" style="font-size:10px;padding:6px 12px;" onclick="openRacePlan()" title="Generar plan de carrera basado en el objetivo actual">🗓 Race Plan</button>
+    <button class="btn" style="font-size:10px;padding:6px 12px;" onclick="openLimitingSegment()" title="Analizar qué segmentos te cuestan más tiempo">🎯 Segmento Limitante</button>
+    <button class="btn" style="font-size:10px;padding:6px 12px;" onclick="exportFullRacePDF()" title="Exportar análisis completo de la carrera a PDF (apto para imprimir)">📄 PDF Carrera</button>
+  </div>
 </div>
 
 <div class="main-tabs">
@@ -2273,6 +2294,37 @@ function focusManualEntry(){
   if(first)setTimeout(()=>{try{first.focus();}catch(e){}},350);
 }
 
+// ── OBJETIVO COMPACTO: popover de presets ──
+function togglePresetPop(ev){
+  if(ev)ev.stopPropagation();
+  const pop=document.getElementById('preset-pop');
+  const btn=document.getElementById('preset-trigger');
+  if(!pop)return;
+  const open=pop.classList.toggle('open');
+  if(btn)btn.setAttribute('aria-expanded',open?'true':'false');
+}
+function closePresetPop(){
+  const pop=document.getElementById('preset-pop');
+  const btn=document.getElementById('preset-trigger');
+  if(pop)pop.classList.remove('open');
+  if(btn)btn.setAttribute('aria-expanded','false');
+}
+function updatePresetTrigger(){
+  const lab=document.getElementById('preset-trigger-label');
+  if(!lab)return;
+  const customActive=document.querySelector('.custom-target-wrap.active');
+  const active=document.querySelector('.preset-btn.active');
+  if(customActive)lab.textContent='⚙ '+(document.getElementById('tgt-display')?.textContent||'');
+  else if(active)lab.textContent=active.textContent.trim();
+  else lab.textContent=document.getElementById('tgt-display')?.textContent||'Objetivo';
+}
+document.addEventListener('click',function(e){
+  const insideWrap=e.target.closest&&e.target.closest('.preset-wrap');
+  if(!insideWrap){closePresetPop();return;}
+  if(e.target.closest('.preset-btn')||e.target.closest('.custom-target-apply'))closePresetPop();
+});
+document.addEventListener('keydown',function(e){ if(e.key==='Escape')closePresetPop(); });
+
 // ── BUILD ROWS ────────────────────────────────────────────
 // ── OVERRIDES DE OBJETIVO POR SEGMENTO ──────────────────────────────────
 // Permite al usuario ajustar el objetivo individual de cualquier Run/Estación/Roxzone
@@ -3147,6 +3199,7 @@ function onUpdate(){
   const rt=rs.reduce((a,b)=>a+b,0),st=ss.reduce((a,b)=>a+b,0),rzt=rzs.reduce((a,b)=>a+b,0),tot=rt+st+rzt;
   maybeAutoCollapseGarmin(tot>0);
   document.querySelector('.main')?.classList.toggle('no-data', tot===0 && !manualMode);
+  updatePresetTrigger();
   const tgt=getCurrentTargetSec();
   // Si el preset actual no existe (ej: avg sin historial), fallback a 75
   const preset=PRESET_TARGETS[currentPreset]||PRESET_TARGETS[75];
